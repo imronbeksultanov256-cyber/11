@@ -111,15 +111,6 @@ const MATCH=[
 const POOL=[...MC.map(([q,o])=>({q,o,c:0})),...TF.map(([q,v,e])=>({q,o:["Верно","Неверно"],c:v?0:1,e,tf:1}))];
 const MAX_PLAYERS=20;
 const N=15,T=20,TM=40,SH=["▲","◆","●","■"],PFX="oshgu-hist-";
-/* ICE: несколько STUN и TURN-серверов, чтобы подключались все, даже в школьном/вузовском Wi-Fi */
-const ICE={iceServers:[
-  {urls:"stun:stun.l.google.com:19302"},
-  {urls:"stun:stun1.l.google.com:19302"},
-  {urls:"stun:global.stun.twilio.com:3478"},
-  {urls:"turn:eu-0.turn.peerjs.com:3478",username:"peerjs",credential:"peerjsp"},
-  {urls:"turn:us-0.turn.peerjs.com:3478",username:"peerjs",credential:"peerjsp"},
-  {urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turns:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"}
-],sdpSemantics:"unified-plan"};
 const app=document.getElementById("app");
 const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else if(a[k]!=null&&a[k]!==false)e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
 const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x}return a};
@@ -131,8 +122,7 @@ let peer=null,timer=null;
 /* ---------- ЭКРАН ВХОДА ---------- */
 function landing(){
   if(peer){try{peer.destroy()}catch(e){}peer=null}
-  joinBusy=false;
-  clearInterval(timer);clearTimeout(hostTimer);hostTimer=null;hostBody=null;lbEl=null;
+  clearInterval(timer);
   const qc=new URLSearchParams(location.search).get("c")||"";
   const code=h("input",{inputmode:"numeric",maxlength:"4",placeholder:"Код игры",value:qc.replace(/\D/g,"").slice(0,4)});
   const nm=h("input",{maxlength:"20",placeholder:"Ваше имя"});
@@ -148,37 +138,29 @@ function landing(){
 /* ---------- ВЕДУЩИЙ (ЭЛЕКТРОННАЯ ДОСКА) ---------- */
 let P=new Map(),phase="lobby",hcode="",hostTimer=null,lbEl=null,rowEls=new Map(),hostBody=null;
 function hostStart(){
-  if(peer){try{peer.destroy()}catch(e){}peer=null}clearTimeout(hostTimer);hostTimer=null;hostBody=null;lbEl=null;
   P=new Map();phase="lobby";rowEls=new Map();
   const tryOpen=()=>{
     hcode=String(1000+Math.floor(Math.random()*9000));
-    const pr=new Peer(PFX+hcode,{config:ICE});peer=pr;let opened=false;
+    const pr=new Peer(PFX+hcode);peer=pr;let opened=false;
     pr.on("open",()=>{opened=true;hostLobby()});
     pr.on("connection",c=>{c.on("data",m=>hostData(c,m));c.on("close",()=>{const p=P.get(c._n);if(p&&p.conn===c){p.on=false;hostUpd()}});c.on("error",()=>{})});
-    pr.on("disconnected",()=>{setTimeout(()=>{try{if(!pr.destroyed)pr.reconnect()}catch(e){}},1000)});
-    pr.on("error",e=>{
-      if(e.type==="unavailable-id"){try{pr.destroy()}catch(x){}tryOpen()}
-      else if(!opened&&e.type!=="peer-unavailable"){show(false,h("div",{class:"card"},h("h2",{},"Нет связи с сервером"),h("p",{},"Проверьте интернет на доске и обновите страницу."),h("button",{class:"btn",onclick:landing},"Назад")))}
-      /* после запуска игры ошибки отдельных игроков не должны ломать экран ведущего */
-    });
+    pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
+    pr.on("error",e=>{if(e.type==="unavailable-id"){try{pr.destroy()}catch(x){}tryOpen()}else if(!opened&&e.type!=="peer-unavailable"){show(false,h("div",{class:"card"},h("h2",{},"Нет связи с сервером"),h("p",{},"Проверьте интернет на доске и обновите страницу."),h("button",{class:"btn",onclick:landing},"Назад")))}});
   };
   show(false,h("p",{class:"mut"},"Создаём игру…"));tryOpen();
 }
 function hostData(c,m){
   if(!m)return;
   if(m.t==="join"){
-    if(c._n&&P.get(c._n)?.conn===c){c.send({t:"joined",name:c._n});return}
-    const id=String(m.id||c.peer),existing=[...P.values()].find(x=>x.id===id);
-    let nm=String(m.name||"").trim().slice(0,20)||"Игрок",p=existing,resume=false;
-    if(p){const old=p.conn;p.conn=c;p.on=true;nm=p.name;resume=p.q>0;if(old!==c)try{old.close()}catch(e){}}
+    let nm=String(m.name||"").trim().slice(0,20)||"Игрок",p=P.get(nm),resume=false;
+    if(p&&!p.on){p.conn=c;p.on=true;resume=p.q>0}
     else{
-      if(P.size>=MAX_PLAYERS){c.send({t:"reject",message:"В игре уже "+MAX_PLAYERS+" участников."});setTimeout(()=>c.close(),300);return}
-      if(phase==="end"){c.send({t:"reject",message:"Игра завершена. Дождитесь нового кода."});return}
-      if(P.has(nm)){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}
-      p={id,name:nm,score:0,q:0,ok:0,done:false,on:true,conn:c};P.set(nm,p)
+      if(P.size>=MAX_PLAYERS){c.send({t:"reject",message:"В игре уже "+MAX_PLAYERS+" участников."});setTimeout(()=>{try{c.close()}catch(e){}},400);return}
+      if(p){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}
+      p={name:nm,score:0,q:0,ok:0,done:false,on:true,conn:c};P.set(nm,p)
     }
     c._n=nm;c.send({t:"joined",name:nm,resume});if(phase==="play")c.send({t:"start"});if(phase==="end")c.send({t:"end"});hostUpd();
-  }else if(m.t==="p"){const p=P.get(c._n);if(!p||p.conn!==c)return;p.score=m.score|0;p.q=Math.min(N,m.q|0);p.ok=m.ok|0;p.done=!!m.done;hostUpd()}
+  }else if(m.t==="p"){const p=P.get(c._n);if(!p)return;p.score=m.score|0;p.q=Math.min(N,m.q|0);p.ok=m.ok|0;p.done=!!m.done;hostUpd()}
 }
 const sorted=()=>[...P.values()].sort((a,b)=>b.score-a.score||b.ok-a.ok||a.name.localeCompare(b.name));
 function hostUpd(){
@@ -228,51 +210,29 @@ function hostFinal(s){
 }
 
 /* ---------- УЧАСТНИК ---------- */
-let playerId="",joinBusy=false;
 let name="",qs=[],qi=0,score=0,ok=0,streak=0,conn=null,left=false,joined=false,playing=false,finished=false,lastLB=null,lbBox=null,banner=null,tries=0;
 function playerJoin(code,nm,errEl){
-  if(joinBusy)return;joinBusy=true;
-  if(peer){try{peer.destroy()}catch(e){}peer=null}
-  playerId=globalThis.crypto?.randomUUID?.()||Date.now()+"-"+Math.random();
-  name=nm;left=false;joined=false;playing=false;finished=false;lastLB=null;tries=0;conn=null;
-  const status=t=>{if(!joined&&!left)errEl.replaceChildren(h("p",{class:"mut"},t))};
-  status("Подключаемся… Это может занять до минуты.");
-  const fail=t=>{left=true;joinBusy=false;clearTimeout(guard);errEl.replaceChildren(h("div",{class:"msg"},t));try{peer&&peer.destroy()}catch(e){}peer=null};
-  const guard=setTimeout(()=>{if(!joined)fail("Не удалось подключиться. Проверьте код. Если не помогает — включите мобильный интернет вместо Wi-Fi.")},60000);
-  const pr=new Peer(undefined,{config:ICE});peer=pr;
-  let missing=0;
+  name=nm;left=false;joined=false;playing=false;finished=false;lastLB=null;tries=0;
+  errEl.replaceChildren(h("p",{class:"mut"},"Подключаемся…"));
+  const fail=t=>{left=true;errEl.replaceChildren(h("div",{class:"msg"},t));try{peer&&peer.destroy()}catch(e){}peer=null};
+  const guard=setTimeout(()=>{if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.")},25000);
+  const pr=new Peer();peer=pr;
   const link=()=>{
-    if(left||pr.destroyed)return;
-    const old=conn;
-    const c=pr.connect(PFX+code,{reliable:true,serialization:"json"});conn=c;
-    if(old&&old!==c){try{old.close()}catch(e){}}
-    let retryPending=false,to=null;
-    const retry=()=>{
-      clearTimeout(to);
-      if(left||conn!==c||retryPending)return;retryPending=true;
-      if(banner){banner.style.display="block";banner.textContent="Связь потеряна, переподключаемся…"}
-      if(++tries<30){status("Подключаемся… попытка "+(tries+1));setTimeout(link,1500)}
-      else if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.");
-    };
-    /* если соединение не открылось за 12 секунд — пробуем заново */
-    to=setTimeout(()=>{if(!c.open)retry()},12000);
-    c.on("open",()=>{clearTimeout(to);c.send({t:"join",name,id:playerId})});
-    c.on("data",m=>{if(conn===c)onMsg(m,guard,fail)});
-    c.on("close",retry);c.on("error",retry);
+    if(left)return;
+    conn=pr.connect(PFX+code,{reliable:true});
+    conn.on("open",()=>{tries=0;conn.send({t:"join",name})});
+    conn.on("data",m=>onMsg(m,guard,fail));
+    conn.on("close",()=>{if(left)return;if(banner){banner.style.display="block";banner.textContent="Связь потеряна, переподключаемся…"}if(++tries<20)setTimeout(link,2000);else if(banner)banner.textContent="Не удалось восстановить связь."});
+    conn.on("error",()=>{});
   };
   pr.on("open",link);
-  pr.on("disconnected",()=>{setTimeout(()=>{try{if(!pr.destroyed)pr.reconnect()}catch(e){}},1000)});
-  pr.on("error",e=>{
-    if(joined)return;
-    if(e.type==="peer-unavailable"){if(++missing>=3){clearTimeout(guard);fail("Игра с таким кодом не найдена.")}}
-    else if(["invalid-id","browser-incompatible","ssl-unavailable","invalid-key"].includes(e.type)){clearTimeout(guard);fail("Ошибка связи: "+e.type)}
-    /* остальные ошибки (webrtc, network, server-error) временные — повторные попытки продолжаются */
-  });
+  pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
+  pr.on("error",e=>{if(e.type==="peer-unavailable"&&!joined){clearTimeout(guard);fail("Игра с таким кодом не найдена.")}else if(!joined&&e.type!=="disconnected"){clearTimeout(guard);fail("Ошибка связи: "+e.type)}});
 }
 function onMsg(m,guard,fail){
   if(!m)return;
-  if(m.t==="reject"){fail(m.message);return}
-  if(m.t==="joined"){clearTimeout(guard);joinBusy=false;tries=0;if(banner)banner.style.display="none";name=m.name;if(!joined){joined=true;wait()}else if(playing)sendP(finished)}
+  if(m.t==="reject"){clearTimeout(guard);fail(m.message);return}
+  if(m.t==="joined"){clearTimeout(guard);if(banner)banner.style.display="none";name=m.name;if(!joined){joined=true;wait()}else if(playing)sendP(finished)}
   else if(m.t==="start"){if(!playing&&!finished)begin()}
   else if(m.t==="lb"){lastLB=m;if(lbBox)drawLB()}
   else if(m.t==="end"){if(!finished){finished=true;clearInterval(timer);if(playing)sendP(true);result(true)}}
