@@ -1,45 +1,64 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Гистология: викторина</title>
+<title>ОшГУ · Гистология: викторина</title>
 <style>
-:root{--bg:#F6EFEA;--fg:#2B1B2E;--card:#FFFFFF;--line:#E4D3D8;--muted:#6B5560;--red:#A10E09;--on-red:#FFFFFF;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1E1418;--fg:#F6EFEA;--card:#2B1B22;--line:#4A343C;--muted:#C4AEB7;--red:#D0342C;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#1E1418;--fg:#F6EFEA;--card:#2B1B22;--line:#4A343C;--muted:#C4AEB7;--red:#D0342C;color-scheme:dark}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{--red:#A10E09;--red2:#D0342C;--ink:#FFFFFF;--mut:#E2C9CE;--card:rgba(255,255,255,.09);--line:rgba(255,255,255,.18)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}
-#app{max-width:760px;margin:0 auto;padding:20px 16px 40px}
-h1{font-size:clamp(28px,6vw,40px);margin:8px 0 12px;line-height:1.1}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(1200px 700px at 15% -10%,#8e1a14 0%,rgba(142,26,20,0) 60%),linear-gradient(160deg,#3b0c12,#1c0710 70%);background-attachment:fixed;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+#app{max-width:820px;margin:0 auto;padding:18px 16px 44px}
+#app.wide{max-width:1280px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-weight:700;letter-spacing:.06em;font-size:13px;color:var(--mut)}
+.brand img{height:40px}.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--red2)}
+h1{font-size:clamp(30px,6vw,52px);line-height:1.05;margin:6px 0 12px;font-weight:800}
 h2{font-size:22px;margin:0 0 12px}
-p{line-height:1.5;margin:0 0 12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
-.muted{color:var(--muted)}
-.btn{display:inline-block;background:var(--red);color:var(--on-red);border:0;border-radius:12px;padding:14px 26px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
-.btn.ghost{background:transparent;color:var(--fg);border:2px solid var(--line)}
-input{width:100%;font-size:20px;padding:14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--fg);margin:8px 0 16px;font-family:inherit}
-.top{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:10px;gap:8px}
-.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:16px}
-.bar i{display:block;height:100%;background:var(--red);width:100%;transition:width .1s linear}
-.q{font-size:clamp(20px,4.5vw,28px);font-weight:700;line-height:1.3;margin:0 0 18px}
-.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.opts.two{grid-template-columns:1fr}
-.opt{border:0;border-radius:12px;padding:20px 14px;min-height:84px;font-size:clamp(16px,3.6vw,20px);font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit}
-.opt b{font-size:24px;flex:none}
+p{line-height:1.5;margin:0 0 12px}.mut{color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px;backdrop-filter:blur(6px)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.btn{display:inline-block;background:#fff;color:#7d0b07;border:0;border-radius:14px;padding:15px 26px;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 6px 0 rgba(0,0,0,.25);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.btn.red{background:var(--red2);color:#fff}.btn.ghost{background:transparent;color:#fff;border:2px solid var(--line);box-shadow:none}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+input{width:100%;font-size:22px;padding:14px;border-radius:14px;border:2px solid var(--line);background:rgba(0,0,0,.25);color:#fff;margin:6px 0 12px;font-family:inherit}
+input::placeholder{color:#c9aab0}
+.code{font-size:clamp(64px,14vw,150px);font-weight:900;letter-spacing:.12em;line-height:1;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{background:rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font-weight:700;font-size:18px}.chip.off{opacity:.45}
+.top{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+.bar{height:12px;background:rgba(255,255,255,.18);border-radius:8px;overflow:hidden;margin-bottom:18px}.bar i{display:block;height:100%;background:#fff;width:100%;transition:width .1s linear}
+.q{font-size:clamp(21px,4.6vw,30px);font-weight:800;line-height:1.3;margin:0 0 18px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.opts.two{grid-template-columns:1fr}
+@media(max-width:520px){.opts{grid-template-columns:1fr}}
+.opt{border:0;border-radius:14px;padding:18px 14px;min-height:82px;font-size:clamp(16px,3.6vw,21px);font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;text-align:left;font-family:inherit;box-shadow:0 5px 0 rgba(0,0,0,.28)}
+.opt b{font-size:26px;flex:none;width:30px;text-align:center}
 .c0{background:#E21B3C}.c1{background:#1368CE}.c2{background:#B07F00}.c3{background:#26890C}
-.opt[disabled]{cursor:default}
-.opt.dim{opacity:.35}
-.opt.right{outline:5px solid #26890C;outline-offset:2px}
-.fb{border-radius:12px;padding:14px 16px;margin:16px 0;font-weight:700}
-.fb.ok{background:#DFF3D8;color:#1C5A0A}.fb.no{background:#FBDADA;color:#8A1212}
-.score{font-size:64px;font-weight:800;color:var(--red);line-height:1}
-.row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
-.row:last-child{border:0}.row .n{width:34px;font-weight:800;text-align:center}.row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row .pt{font-weight:800}
-.hero{text-align:center;padding:12px 0}
-.badge{display:inline-block;background:var(--red);color:var(--on-red);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;letter-spacing:.04em}
-.btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.opt[disabled]{cursor:default}.opt.dim{opacity:.3}.opt.right{outline:5px solid #fff;outline-offset:2px}
+.fb{border-radius:14px;padding:14px 16px;margin:16px 0;font-weight:800}.fb.ok{background:#DFF3D8;color:#1C5A0A}.fb.no{background:#FBDADA;color:#8A1212}
+.score{font-size:72px;font-weight:900;line-height:1}
+.mt{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.mt button{border:2px solid var(--line);background:rgba(255,255,255,.1);color:#fff;border-radius:14px;padding:14px 10px;min-height:70px;font-size:clamp(15px,3.4vw,19px);font-weight:700;font-family:inherit;cursor:pointer}
+.mt button.sel{background:#fff;color:#7d0b07}
+.mt button.done{background:#26890C;border-color:#26890C;cursor:default}
+.mt button.bad{animation:sh .35s;background:#E21B3C;border-color:#E21B3C}
+@keyframes sh{20%{transform:translateX(-7px)}60%{transform:translateX(7px)}}
+.lb{position:relative}
+.row{position:absolute;left:0;right:0;height:62px;display:flex;align-items:center;gap:14px;padding:0 18px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid var(--line);transition:transform .7s cubic-bezier(.3,.9,.3,1)}
+.row .n{width:42px;font-size:26px;font-weight:900;text-align:center}.row .nm{width:30%;min-width:110px;font-size:24px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .pg{flex:1;height:14px;background:rgba(255,255,255,.15);border-radius:8px;overflow:hidden}.row .pg i{display:block;height:100%;background:#fff;border-radius:8px;transition:width .6s}
+.row .pt{width:110px;text-align:right;font-size:26px;font-weight:900}.row.first{background:linear-gradient(90deg,#d4a017,#f2c94c);color:#3a2a00;border:0}.row.first .pg{background:rgba(0,0,0,.18)}.row.first .pg i{background:#3a2a00}
+.row.off{opacity:.55}
+.pod{display:flex;justify-content:center;align-items:flex-end;gap:14px;margin:18px 0 26px}
+.pod div{width:min(30%,220px);text-align:center;border-radius:16px 16px 0 0;padding:14px 8px;font-weight:800}
+.pod .nm{font-size:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pod .pt{font-size:30px}
+.btns{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+.qr{background:#fff;padding:12px;border-radius:14px;display:inline-block}
+.hostgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:center}
+@media(max-width:800px){.hostgrid{grid-template-columns:1fr}}
+.msg{background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700}
 </style></head><body><div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const MC=[
 ["Какие клетки фундальных желёз выделяют соляную кислоту?",["Обкладочные","Главные","Добавочные мукоциты","М-клетки"]],
@@ -80,80 +99,193 @@ const TF=[
 ["Эозин окрашивает оксифильные структуры в розовый цвет.",1,"Гематоксилин окрашивает базофильные структуры в синий цвет."],
 ["Главные клетки желудка базофильны.",1,"Из-за развитого гранулярного ЭПС их цитоплазма окрашивается основными красителями."],
 ["Мышечная оболочка тонкой кишки состоит из двух слоёв.",1,"Это внутренний круговой и наружный продольный слои."]];
+const MATCH=[
+["Соедините клетку и её продукт",[["Выделяют HCl","Обкладочные"],["Вырабатывают пепсиноген","Главные"],["Секретируют слизь","Бокаловидные"],["Лизоцим в дне крипт","Клетки Панета"]]],
+["Соедините клетку печени и её роль",[["Фагоцитируют бактерии","Клетки Купфера"],["Запасают витамин A","Клетки Ито"],["Образуют жёлчь","Гепатоциты"],["Выстилают синусоид","Эндотелиоциты"]]],
+["Соедините гормон и клетку островка",[["Глюкагон","α-клетки"],["Инсулин","β-клетки"],["Соматостатин","δ-клетки"],["Панкреатический полипептид","PP-клетки"]]],
+["Соедините признак и отдел кишки",[["Бруннеровы железы","Двенадцатиперстная"],["Пейеровы бляшки","Подвздошная"],["Тении","Толстая кишка"],["Самые длинные ворсинки","Тощая"]]],
+["Соедините особенность и часть желудка",[["Слизистые железы у входа","Кардиальный отдел"],["Главные и обкладочные клетки","Фундальный отдел"],["Гастрин и сфинктер","Пилорический отдел"],["Косой, круговой, продольный слои","Мышечная оболочка"]]],
+["Соедините структуру и орган",[["Ворсинки и крипты","Тонкая кишка"],["Классическая долька","Печень"],["Островки Лангерганса","Поджелудочная железа"],["Желудочные ямки","Желудок"]]],
+["Соедините определение и термин",[["Окрашивается гематоксилином","Базофильный"],["Окрашивается эозином","Оксифильный"],["Концевой отдел железы","Ацинус"],["Трубчатое углубление эпителия","Крипта"]]],
+["Соедините функцию и клетку кишки",[["Всасывание","Энтероциты"],["Захват антигенов","М-клетки"],["Секретин и холецистокинин","Эндокриноциты"],["Обновление эпителия","Камбиальные клетки"]]]];
 const POOL=[...MC.map(([q,o])=>({q,o,c:0})),...TF.map(([q,v,e])=>({q,o:["Верно","Неверно"],c:v?0:1,e,tf:1}))];
-const N=15,T=20,SH=["▲","◆","●","■"];
+const N=15,T=20,TM=40,SH=["▲","◆","●","■"],PFX="oshgu-hist-";
 const app=document.getElementById("app");
 const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
 const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x}return a};
-const show=(...n)=>{app.replaceChildren(...n)};
-let name="",qs=[],qi=0,score=0,ok=0,streak=0,timer=null,unsub=null;
+const brand=()=>h("div",{class:"brand"},h("img",{src:"logo.png",alt:"",onerror:function(){this.remove()}}),h("span",{class:"dot"}),"ОШГУ · ГИСТОЛОГИЯ");
+const show=(wide,...n)=>{app.className=wide?"wide":"";app.replaceChildren(brand(),...n)};
+const ordinal=i=>["🥇","🥈","🥉"][i]||String(i+1);
+let peer=null,timer=null;
 
-async function watchLB(cb){
-  stopLB();let t;
-  try{
-    const db=await claude.use("db");
-    if(!db){cb(null);return}
-    t=setTimeout(()=>cb(null),10000);
-    unsub=db.collection("scores").orderBy("score","desc").limit(10).onSnapshot(s=>{clearTimeout(t);cb(s.docs.map(d=>d.data()))},()=>{clearTimeout(t);cb(null)});
-  }catch(e){cb(null)}
+/* ---------- ЭКРАН ВХОДА ---------- */
+function landing(){
+  if(peer){try{peer.destroy()}catch(e){}peer=null}
+  clearInterval(timer);
+  const qc=new URLSearchParams(location.search).get("c")||"";
+  const code=h("input",{inputmode:"numeric",maxlength:"4",placeholder:"Код игры",value:qc.replace(/\D/g,"").slice(0,4)});
+  const nm=h("input",{maxlength:"20",placeholder:"Ваше имя"});
+  const err=h("div");
+  const go=()=>{const c=code.value.trim(),n=nm.value.trim();if(c.length!==4){code.focus();return}if(!n){nm.focus();return}playerJoin(c,n,err)};
+  nm.onkeydown=e=>{if(e.key==="Enter")go()};
+  show(false,h("h1",{},"Викторина по гистологии"),h("p",{class:"mut"},"Желудок, кишечник, печень и поджелудочная железа. 15 вопросов у каждого свои, а рейтинг виден на общем экране."),
+    h("div",{class:"grid2"},
+      h("div",{class:"card"},h("h2",{},"Я участник"),code,nm,err,h("button",{class:"btn",onclick:go},"Войти в игру")),
+      h("div",{class:"card"},h("h2",{},"Я веду игру"),h("p",{class:"mut"},"Откройте это окно на электронной доске. Появится код, по которому зайдут одногруппники."),h("button",{class:"btn red",onclick:hostStart},"Начать"))));
 }
-const stopLB=()=>{if(unsub){unsub();unsub=null}};
-function lbBox(){
-  const box=h("div",{class:"card"},h("h2",{},"🏆 Рейтинг участников"),h("p",{class:"muted"},"Загрузка…"));
-  watchLB(rows=>{
-    box.replaceChildren(h("h2",{},"🏆 Рейтинг участников"));
-    if(rows===null)box.append(h("p",{class:"muted"},"Общий рейтинг сейчас недоступен. Ваш результат показан выше."));
-    else if(!rows.length)box.append(h("p",{class:"muted"},"Пока никто не завершил игру. Будьте первым!"));
-    else rows.forEach((r,i)=>box.append(h("div",{class:"row"},h("span",{class:"n"},["🥇","🥈","🥉"][i]||String(i+1)),h("span",{class:"nm"},String(r.name||"Участник")),h("span",{class:"pt"},String(r.score)+" · "+String(r.correct)+"/"+N))));
+
+/* ---------- ВЕДУЩИЙ (ЭЛЕКТРОННАЯ ДОСКА) ---------- */
+let P=new Map(),phase="lobby",hcode="",hostTimer=null,lbEl=null,rowEls=new Map(),hostBody=null;
+function hostStart(){
+  P=new Map();phase="lobby";rowEls=new Map();
+  const tryOpen=()=>{
+    hcode=String(1000+Math.floor(Math.random()*9000));
+    const pr=new Peer(PFX+hcode);peer=pr;
+    pr.on("open",()=>hostLobby());
+    pr.on("connection",c=>{c.on("data",m=>hostData(c,m));c.on("close",()=>{const p=P.get(c._n);if(p&&p.conn===c){p.on=false;hostUpd()}});c.on("error",()=>{})});
+    pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
+    pr.on("error",e=>{if(e.type==="unavailable-id"){try{pr.destroy()}catch(x){}tryOpen()}else if(e.type!=="peer-unavailable"){show(false,h("div",{class:"card"},h("h2",{},"Нет связи с сервером"),h("p",{},"Проверьте интернет на доске и обновите страницу."),h("button",{class:"btn",onclick:landing},"Назад")))}});
+  };
+  show(false,h("p",{class:"mut"},"Создаём игру…"));tryOpen();
+}
+function hostData(c,m){
+  if(!m)return;
+  if(m.t==="join"){
+    let nm=String(m.name||"").trim().slice(0,20)||"Игрок",p=P.get(nm),resume=false;
+    if(p&&!p.on){p.conn=c;p.on=true;resume=p.q>0}
+    else{if(p){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}p={name:nm,score:0,q:0,ok:0,done:false,on:true,conn:c};P.set(nm,p)}
+    c._n=nm;c.send({t:"joined",name:nm,resume});if(phase==="play")c.send({t:"start"});if(phase==="end")c.send({t:"end"});hostUpd();
+  }else if(m.t==="p"){const p=P.get(c._n);if(!p)return;p.score=m.score|0;p.q=Math.min(N,m.q|0);p.ok=m.ok|0;p.done=!!m.done;hostUpd()}
+}
+const sorted=()=>[...P.values()].sort((a,b)=>b.score-a.score||b.ok-a.ok||a.name.localeCompare(b.name));
+function hostUpd(){
+  if(hostTimer)return;
+  hostTimer=setTimeout(()=>{hostTimer=null;
+    const s=sorted(),rows=s.slice(0,40).map(p=>[p.name,p.score,p.q,p.done?1:0]);
+    P.forEach(p=>{if(p.on){try{p.conn.send({t:"lb",rows,n:P.size})}catch(e){}}});
+    if(phase==="lobby")hostLobby(true);else if(phase==="play")hostBoard(s);else if(phase==="end")hostFinal(s);
+  },250);
+}
+function hostLobby(soft){
+  const chips=h("div",{class:"chips"},[...P.values()].map(p=>h("span",{class:"chip"+(p.on?"":" off")},p.name)));
+  if(soft&&hostBody){hostBody.replaceChildren(h("h2",{},"Участников: "+P.size),P.size?chips:h("p",{class:"mut"},"Ждём первых игроков…"),
+    h("div",{class:"btns"},h("button",{class:"btn red",disabled:P.size?null:"disabled",onclick:hostPlay},"Старт")));return}
+  const url=location.origin+location.pathname+"?c="+hcode,qr=h("div",{class:"qr"});
+  hostBody=h("div",{class:"card"});
+  show(true,h("div",{class:"hostgrid"},h("div",{},h("p",{class:"mut"},"Зайдите на сайт и введите код"),h("p",{class:"mut"},location.host),h("div",{class:"code"},hcode),h("p",{class:"mut"},"или отсканируйте QR-код")),h("div",{style:"text-align:center"},qr)),hostBody);
+  try{if(typeof QRCode!=="undefined")new QRCode(qr,{text:url,width:190,height:190})}catch(e){}
+  hostLobby(true);
+}
+function hostPlay(){
+  if(!P.size)return;phase="play";P.forEach(p=>{if(p.on)try{p.conn.send({t:"start"})}catch(e){}});
+  rowEls=new Map();lbEl=null;hostBoard(sorted());
+}
+function hostBoard(s){
+  if(!lbEl||!lbEl.isConnected){
+    lbEl=h("div",{class:"lb"});
+    show(true,h("div",{class:"top"},h("div",{},h("span",{class:"mut"},"Код игры: "),h("b",{style:"font-size:28px"},hcode)),h("div",{id:"cnt",class:"mut"}),h("button",{class:"btn ghost",onclick:hostEnd},"Завершить игру")),lbEl);
+  }
+  const done=s.filter(p=>p.done).length;document.getElementById("cnt").textContent="Игроков: "+s.length+" · закончили: "+done;
+  lbEl.style.height=Math.max(1,s.length)*70+"px";
+  const keep=new Set();
+  s.forEach((p,i)=>{
+    keep.add(p.name);let r=rowEls.get(p.name);
+    if(!r){r={el:h("div",{class:"row"}),n:h("span",{class:"n"}),nm:h("span",{class:"nm"}),pgw:h("div",{class:"pg"}),pg:h("i"),pt:h("span",{class:"pt"})};r.pgw.append(r.pg);r.el.append(r.n,r.nm,r.pgw,r.pt);lbEl.append(r.el);rowEls.set(p.name,r);r.el.style.transform="translateY("+(i*70)+"px)"}
+    r.el.style.transform="translateY("+(i*70)+"px)";r.el.className="row"+(i===0&&p.score>0?" first":"")+(p.on?"":" off");
+    r.n.textContent=ordinal(i);r.nm.textContent=p.name+(p.done?" ✔":"");r.pg.style.width=(p.q/N*100)+"%";r.pt.textContent=p.score;
   });
-  return box;
+  rowEls.forEach((r,k)=>{if(!keep.has(k)){r.el.remove();rowEls.delete(k)}});
 }
-function start(){
-  stopLB();
-  const inp=h("input",{maxlength:"20",placeholder:"Ваше имя или ник",value:name});
-  const go=()=>{name=inp.value.trim();if(!name){inp.focus();return}begin()};
-  inp.onkeydown=e=>{if(e.key==="Enter")go()};
-  show(h("div",{class:"hero"},h("span",{class:"badge"},"ГИСТОЛОГИЯ"),h("h1",{},"Викторина: желудок, кишечник, печень, поджелудочная железа"),
-    h("p",{class:"muted"},"15 вопросов, у каждого участника свои. На ответ 20 секунд: чем быстрее, тем больше очков.")),
-    h("div",{class:"card"},h("label",{},"Как вас записать в рейтинг?"),inp,h("div",{class:"btns"},h("button",{class:"btn",onclick:go},"Играть"),h("button",{class:"btn ghost",onclick:()=>{show(lbBox(),h("button",{class:"btn ghost",onclick:start},"Назад"))}},"Рейтинг"))));
+function hostEnd(){phase="end";P.forEach(p=>{if(p.on)try{p.conn.send({t:"end"})}catch(e){}});hostFinal(sorted())}
+function hostFinal(s){
+  const cols=["#C0C0C0","#F2C94C","#CD7F32"],hs=[190,250,150],order=[1,0,2].filter(i=>s[i]);
+  const pod=h("div",{class:"pod"},order.map(i=>{const d=h("div",{style:"height:"+hs[i]+"px;background:"+cols[i]+";color:#2b1b00"},h("div",{style:"font-size:34px"},ordinal(i)),h("div",{class:"nm"},s[i].name),h("div",{class:"pt"},String(s[i].score)));return d}));
+  const list=h("div",{class:"card"},s.slice(3,15).map((p,k)=>h("div",{style:"display:flex;gap:14px;padding:8px 4px;font-size:20px;font-weight:700;border-bottom:1px solid var(--line)"},h("span",{style:"width:36px"},String(k+4)),h("span",{style:"flex:1"},p.name),h("span",{},String(p.score)))));
+  show(true,h("h1",{style:"text-align:center"},"Итоги игры"),pod,s.length>3?list:null,h("div",{class:"btns",style:"justify-content:center"},h("button",{class:"btn",onclick:landing},"Новая игра")));
 }
+
+/* ---------- УЧАСТНИК ---------- */
+let name="",qs=[],qi=0,score=0,ok=0,streak=0,conn=null,left=false,joined=false,playing=false,finished=false,lastLB=null,lbBox=null,banner=null,tries=0;
+function playerJoin(code,nm,errEl){
+  name=nm;left=false;joined=false;playing=false;finished=false;lastLB=null;tries=0;
+  errEl.replaceChildren(h("p",{class:"mut"},"Подключаемся…"));
+  const fail=t=>{errEl.replaceChildren(h("div",{class:"msg"},t));try{peer&&peer.destroy()}catch(e){}peer=null};
+  const guard=setTimeout(()=>{if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.")},12000);
+  const pr=new Peer();peer=pr;
+  const link=()=>{
+    conn=pr.connect(PFX+code,{reliable:true});
+    conn.on("open",()=>{tries=0;conn.send({t:"join",name})});
+    conn.on("data",m=>onMsg(m,guard,fail));
+    conn.on("close",()=>{if(left)return;if(banner)banner.textContent="Связь потеряна, переподключаемся…";if(++tries<20)setTimeout(link,2000);else if(banner)banner.textContent="Не удалось восстановить связь."});
+    conn.on("error",()=>{});
+  };
+  pr.on("open",link);
+  pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
+  pr.on("error",e=>{if(e.type==="peer-unavailable"&&!joined){clearTimeout(guard);fail("Игра с таким кодом не найдена.")}else if(!joined&&e.type!=="disconnected"){clearTimeout(guard);fail("Ошибка связи: "+e.type)}});
+}
+function onMsg(m,guard,fail){
+  if(!m)return;
+  if(m.t==="joined"){clearTimeout(guard);name=m.name;if(!joined){joined=true;wait()}else if(playing)sendP(finished)}
+  else if(m.t==="start"){if(!playing&&!finished)begin()}
+  else if(m.t==="lb"){lastLB=m;if(lbBox)drawLB()}
+  else if(m.t==="end"){if(!finished){finished=true;clearInterval(timer);if(playing)sendP(true);result(true)}}
+}
+function wait(){banner=h("div",{class:"msg",style:"display:none"});show(false,h("div",{class:"card",style:"text-align:center"},h("h1",{},"Вы в игре!"),h("p",{style:"font-size:28px;font-weight:800"},name),h("p",{class:"mut"},"Ждите, пока ведущий нажмёт «Старт». Смотрите на экран доски.")));}
+function sendP(done){try{conn&&conn.open&&conn.send({t:"p",score,q:done?N:qi,ok,done:!!done})}catch(e){}}
+function prep(p){if(p.tf)return p;const idx=shuf([0,1,2,3]);return{q:p.q,o:idx.map(i=>p.o[i]),c:idx.indexOf(0)}}
 function begin(){
-  qs=shuf(POOL).slice(0,N).map(p=>{if(p.tf)return p;const idx=shuf([0,1,2,3]);return{q:p.q,o:idx.map(i=>p.o[i]),c:idx.indexOf(0)}});
-  qi=0;score=0;ok=0;streak=0;ask();
+  playing=true;finished=false;
+  const reg=shuf(POOL).slice(0,12).map(prep),mt=shuf(MATCH).slice(0,3).map(([title,pairs])=>({m:1,title,pairs}));
+  const pos=new Set(shuf([...Array(N).keys()]).slice(0,3));qs=[];for(let i=0;i<N;i++)qs.push(pos.has(i)?mt.shift():reg.shift());
+  qi=0;score=0;ok=0;streak=0;sendP(false);ask();
 }
-function ask(){
-  const p=qs[qi];let done=false;const t0=performance.now();
-  const bar=h("i"),pts=h("span",{},"Очки: "+score);
+function ask(){qs[qi].m?askMatch(qs[qi]):askQ(qs[qi])}
+function head(pts,bar){banner=h("div",{class:"msg",style:"display:none"});return[h("div",{class:"top"},h("span",{},"Вопрос "+(qi+1)+" из "+N),pts),h("div",{class:"bar"},bar)]}
+function nextBtn(){return h("button",{class:"btn",onclick:()=>{qi++;qi<N?ask():fin()}},qi+1<N?"Дальше":"Результаты")}
+function askQ(p){
+  let done=false;const t0=performance.now(),bar=h("i"),pts=h("span",{},"Очки: "+score),fb=h("div"),next=h("div");
   const btns=p.o.map((o,i)=>h("button",{class:"opt "+(p.tf?(i===0?"c3":"c0"):"c"+i),onclick:()=>pick(i)},h("b",{},p.tf?(i===0?"✔":"✘"):SH[i]),o));
-  const fb=h("div");
-  const next=h("div");
   function pick(i){
     if(done)return;done=true;clearInterval(timer);
     const el=Math.min(T,(performance.now()-t0)/1000),good=i===p.c;let gain=0;
     if(good){gain=Math.round(1000*(1-el/T/2));score+=gain;ok++;streak++}else streak=0;
     btns.forEach((b,k)=>{b.disabled=true;if(k===p.c)b.classList.add("right");else if(k!==i)b.classList.add("dim")});
-    pts.textContent="Очки: "+score;
-    fb.className="fb "+(good?"ok":"no");
-    fb.textContent=(i<0?"Время вышло. ":good?"Правильно! +"+gain+" очков"+(streak>1?" · серия "+streak+" 🔥":"")+". ":"Неправильно. ")+(p.tf&&p.e?p.e:(!good?"Правильный ответ: "+p.o[p.c]+".":""));
-    next.replaceChildren(h("button",{class:"btn",onclick:()=>{qi++;qi<N?ask():finish()}},qi+1<N?"Дальше":"Результаты"));
+    pts.textContent="Очки: "+score;fb.className="fb "+(good?"ok":"no");
+    fb.textContent=(i<0?"Время вышло. ":good?"Правильно! +"+gain+(streak>1?" · серия "+streak+" 🔥":"")+". ":"Неправильно. ")+(p.tf&&p.e?p.e:(!good?"Правильный ответ: "+p.o[p.c]+".":""));
+    qi++;sendP(false);qi--;next.replaceChildren(nextBtn());
   }
-  clearInterval(timer);
-  timer=setInterval(()=>{const left=T-(performance.now()-t0)/1000;bar.style.width=Math.max(0,left/T*100)+"%";if(left<=0)pick(-1)},100);
-  show(h("div",{class:"top"},h("span",{},"Вопрос "+(qi+1)+" из "+N),pts),h("div",{class:"bar"},bar),h("p",{class:"q"},p.q),h("div",{class:"opts"+(p.tf?" two":"")},btns),fb,next);
+  clearInterval(timer);timer=setInterval(()=>{const l=T-(performance.now()-t0)/1000;bar.style.width=Math.max(0,l/T*100)+"%";if(l<=0)pick(-1)},100);
+  show(false,...head(pts,bar),h("p",{class:"q"},p.q),h("div",{class:"opts"+(p.tf?" two":"")},btns),fb,next);
 }
-async function save(){
-  try{
-    const db=await claude.use("db"),user=await claude.use("user");
-    const id=user&&await user.id();if(!db||!id)return;
-    const ref=db.collection("scores").doc(id),s=await ref.get();
-    if(!s.exists||s.data().score<score)await ref.set({name,score,correct:ok,at:Date.now()});
-  }catch(e){}
+function askMatch(p){
+  const t0=performance.now(),bar=h("i"),pts=h("span",{},"Очки: "+score),fb=h("div"),next=h("div");
+  let sel=-1,got=0,mist=0,gain=0,over=false;const LB=[],RB=[];
+  const finish=()=>{if(over)return;over=true;clearInterval(timer);LB.concat(RB).forEach(b=>b.disabled=true);
+    const perfect=got===4&&mist===0;if(perfect){ok++;streak++}else streak=0;
+    fb.className="fb "+(got===4?"ok":"no");fb.textContent="Соединено "+got+" из 4 · +"+gain+" очков"+(perfect?" · без ошибок!":mist?" · ошибок: "+mist:"");
+    pts.textContent="Очки: "+score;qi++;sendP(false);qi--;next.replaceChildren(nextBtn())};
+  p.pairs.forEach((pr,i)=>{
+    LB[i]=h("button",{onclick:()=>{if(over||LB[i].classList.contains("done"))return;LB.forEach(b=>b.classList.remove("sel"));sel=i;LB[i].classList.add("sel")}},pr[0]);
+    RB[i]=h("button",{onclick:()=>{
+      if(over||sel<0||RB[i].classList.contains("done"))return;
+      if(sel===i){const el=Math.min(TM,(performance.now()-t0)/1000),g=Math.round(250*(1-el/TM/2));gain+=g;score+=g;got++;LB[i].className=RB[i].className="done";sel=-1;pts.textContent="Очки: "+score;if(got===4)finish()}
+      else{mist++;const b=RB[i];b.classList.add("bad");setTimeout(()=>b.classList.remove("bad"),400);LB.forEach(x=>x.classList.remove("sel"));sel=-1}
+    }},pr[1]);
+  });
+  const L=shuf([0,1,2,3]),R=shuf([0,1,2,3]),cells=[];for(let k=0;k<4;k++)cells.push(LB[L[k]],RB[R[k]]);
+  clearInterval(timer);timer=setInterval(()=>{const l=TM-(performance.now()-t0)/1000;bar.style.width=Math.max(0,l/TM*100)+"%";if(l<=0)finish()},100);
+  show(false,...head(pts,bar),h("p",{class:"q"},p.title),h("p",{class:"mut"},"Нажмите на вопрос слева, затем на верный ответ справа."),h("div",{class:"mt"},cells),fb,next);
 }
-function finish(){
-  clearInterval(timer);save();
-  const msg=ok>=12?"Отличный результат! 🎉":ok>=8?"Хорошо! Ещё немного — и будет отлично.":"Повторите тему и попробуйте снова.";
-  show(h("div",{class:"hero"},h("span",{class:"badge"},"РЕЗУЛЬТАТ"),h("h1",{},name+", игра окончена"),h("div",{class:"score"},String(score)),h("p",{class:"muted"},"очков · правильных ответов: "+ok+" из "+N),h("p",{},msg)),
-    lbBox(),h("div",{class:"btns"},h("button",{class:"btn",onclick:begin},"Играть снова с новыми вопросами"),h("button",{class:"btn ghost",onclick:start},"В начало")));
+function fin(){finished=true;clearInterval(timer);sendP(true);result(false)}
+function drawLB(){
+  if(!lastLB){lbBox.replaceChildren(h("h2",{},"🏆 Рейтинг"),h("p",{class:"mut"},"Ждём данных…"));return}
+  const rows=lastLB.rows,me=rows.findIndex(r=>r[0]===name);
+  lbBox.replaceChildren(h("h2",{},"🏆 Рейтинг"+(me>=0?" · ваше место: "+(me+1)+" из "+lastLB.n:"")),...rows.slice(0,10).map((r,i)=>h("div",{style:"display:flex;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line);font-weight:"+(r[0]===name?"900":"600")+";font-size:18px"},h("span",{style:"width:34px;text-align:center"},ordinal(i)),h("span",{style:"flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"},r[0]+(r[3]?" ✔":"")),h("span",{},String(r[1])))));
 }
-start();
+function result(forced){
+  lbBox=h("div",{class:"card"});
+  show(false,h("div",{style:"text-align:center;padding:8px 0"},h("p",{class:"mut"},forced?"Ведущий завершил игру":"Вы ответили на все вопросы"),h("h1",{},name),h("div",{class:"score"},String(score)),h("p",{class:"mut"},"очков · верных ответов: "+ok+" из "+N)),lbBox);
+  drawLB();
+}
+landing();
 </script></body></html>
