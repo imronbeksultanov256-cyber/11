@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Гистология: викторина</title>
+<style>
+:root{--bg:#F6EFEA;--fg:#2B1B2E;--card:#FFFFFF;--line:#E4D3D8;--muted:#6B5560;--red:#A10E09;--on-red:#FFFFFF;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1E1418;--fg:#F6EFEA;--card:#2B1B22;--line:#4A343C;--muted:#C4AEB7;--red:#D0342C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1E1418;--fg:#F6EFEA;--card:#2B1B22;--line:#4A343C;--muted:#C4AEB7;--red:#D0342C;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}
+#app{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:clamp(28px,6vw,40px);margin:8px 0 12px;line-height:1.1}
+h2{font-size:22px;margin:0 0 12px}
+p{line-height:1.5;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+.muted{color:var(--muted)}
+.btn{display:inline-block;background:var(--red);color:var(--on-red);border:0;border-radius:12px;padding:14px 26px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--fg);border:2px solid var(--line)}
+input{width:100%;font-size:20px;padding:14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--fg);margin:8px 0 16px;font-family:inherit}
+.top{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:10px;gap:8px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:16px}
+.bar i{display:block;height:100%;background:var(--red);width:100%;transition:width .1s linear}
+.q{font-size:clamp(20px,4.5vw,28px);font-weight:700;line-height:1.3;margin:0 0 18px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opts.two{grid-template-columns:1fr}
+.opt{border:0;border-radius:12px;padding:20px 14px;min-height:84px;font-size:clamp(16px,3.6vw,20px);font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit}
+.opt b{font-size:24px;flex:none}
+.c0{background:#E21B3C}.c1{background:#1368CE}.c2{background:#B07F00}.c3{background:#26890C}
+.opt[disabled]{cursor:default}
+.opt.dim{opacity:.35}
+.opt.right{outline:5px solid #26890C;outline-offset:2px}
+.fb{border-radius:12px;padding:14px 16px;margin:16px 0;font-weight:700}
+.fb.ok{background:#DFF3D8;color:#1C5A0A}.fb.no{background:#FBDADA;color:#8A1212}
+.score{font-size:64px;font-weight:800;color:var(--red);line-height:1}
+.row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}.row .n{width:34px;font-weight:800;text-align:center}.row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row .pt{font-weight:800}
+.hero{text-align:center;padding:12px 0}
+.badge{display:inline-block;background:var(--red);color:var(--on-red);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;letter-spacing:.04em}
+.btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+</style></head><body><div id="app"></div>
+<script>
+const MC=[
+["Какие клетки фундальных желёз выделяют соляную кислоту?",["Обкладочные","Главные","Добавочные мукоциты","М-клетки"]],
+["Какие клетки желудка выделяют пепсиноген?",["Главные","Обкладочные","Бокаловидные","Клетки Панета"]],
+["Для всасывания какого витамина нужен внутренний фактор Касла?",["B12","A","C","D"]],
+["Какой эпителий покрывает слизистую оболочку желудка?",["Однослойный призматический железистый","Многослойный плоский","Однослойный плоский","Переходный"]],
+["Сколько слоёв гладкой мышцы в мышечной оболочке желудка?",["Три","Один","Два","Четыре"]],
+["Какие клетки пилорических желёз выделяют гастрин?",["G-клетки","D-клетки","Главные клетки","М-клетки"]],
+["Как называются трубчатые углубления между ворсинками тонкой кишки?",["Крипты Либеркюна","Ацинусы","Дольки","Лакуны"]],
+["Какие клетки лежат в дне крипт и вырабатывают лизоцим?",["Клетки Панета","Энтероциты","Бокаловидные клетки","Клетки Купфера"]],
+["Что образует щёточную каёмку энтероцитов?",["Микроворсинки","Реснички","Жгутики","Ворсинки слизистой"]],
+["Какие железы лежат в подслизистой основе двенадцатиперстной кишки?",["Бруннеровы","Либеркюновы","Пейеровы","Фундальные"]],
+["В каком отделе кишечника находятся пейеровы бляшки?",["В подвздошной кишке","В желудке","В двенадцатиперстной кишке","В прямой кишке"]],
+["Какие клетки кишки захватывают антигены над лимфоидными фолликулами?",["М-клетки","Клетки Панета","Энтероциты","Клетки Ито"]],
+["Чего нет в стенке толстой кишки?",["Ворсинок","Крипт","Бокаловидных клеток","Мышечной оболочки"]],
+["Как называются три продольные ленты мышц толстой кишки?",["Тении","Складки","Сфинктеры","Ворсинки"]],
+["Что находится в центре классической дольки печени?",["Центральная вена","Портальный тракт","Жёлчный проток","Воротная вена"]],
+["Какие клетки печени являются макрофагами?",["Клетки Купфера","Клетки Ито","Гепатоциты","Ациноциты"]],
+["Какие клетки печени запасают витамин A?",["Клетки Ито","Клетки Купфера","Гепатоциты","Энтероциты"]],
+["Как называется щель между гепатоцитами и эндотелием синусоида?",["Пространство Диссе","Крипта","Просвет ацинуса","Желудочная ямка"]],
+["Из чего состоит портальная триада?",["Вена, артерия, жёлчный проток","Три вены","Две артерии и вена","Три жёлчных протока"]],
+["В каком направлении течёт жёлчь в дольке печени?",["От центра к периферии","От периферии к центру","Только по кругу","Из центральной вены"]],
+["Какой фермент активирует трипсиноген в двенадцатиперстной кишке?",["Энтерокиназа","Амилаза","Липаза","Пепсин"]],
+["Как называются концевые отделы экзокринной части поджелудочной железы?",["Ацинусы","Крипты","Дольки","Ворсинки"]],
+["Какие клетки островков Лангерганса выделяют инсулин?",["β-клетки","α-клетки","δ-клетки","PP-клетки"]],
+["Какой гормон вырабатывают α-клетки островков?",["Глюкагон","Инсулин","Соматостатин","Гастрин"]],
+["Какую долю массы поджелудочной железы составляют островки?",["1–2 %","Около 50 %","Около 25 %","Более 80 %"]],
+["Каким красителем окрашиваются базофильные структуры?",["Гематоксилином","Эозином","Йодом","Суданом"]],
+["За сколько суток обновляется эпителий желудка?",["За 3–5 суток","За 1 час","За 3 месяца","Не обновляется"]]];
+const TF=[
+["Обкладочные клетки желудка выделяют соляную кислоту.",1,"Они вырабатывают HCl и внутренний фактор Касла."],
+["В стенке толстой кишки есть ворсинки.",0,"В толстой кишке ворсинок нет, но есть глубокие крипты."],
+["Кровь в классической дольке печени течёт от периферии к центральной вене.",1,"Жёлчь течёт в обратную сторону — от центра к периферии."],
+["Клетки Панета лежат в слизистой желудка.",0,"Они находятся в дне крипт тонкой кишки."],
+["Бруннеровы железы лежат в подслизистой основе двенадцатиперстной кишки.",1,"Их щелочная слизь нейтрализует кислый химус."],
+["Жёлчные капилляры имеют собственную стенку.",0,"Их стенку образуют мембраны соседних гепатоцитов."],
+["Островки Лангерганса составляют большую часть массы поджелудочной железы.",0,"Они занимают всего 1–2 % массы, остальное — экзокринная часть."],
+["Эозин окрашивает оксифильные структуры в розовый цвет.",1,"Гематоксилин окрашивает базофильные структуры в синий цвет."],
+["Главные клетки желудка базофильны.",1,"Из-за развитого гранулярного ЭПС их цитоплазма окрашивается основными красителями."],
+["Мышечная оболочка тонкой кишки состоит из двух слоёв.",1,"Это внутренний круговой и наружный продольный слои."]];
+const POOL=[...MC.map(([q,o])=>({q,o,c:0})),...TF.map(([q,v,e])=>({q,o:["Верно","Неверно"],c:v?0:1,e,tf:1}))];
+const N=15,T=20,SH=["▲","◆","●","■"];
+const app=document.getElementById("app");
+const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x}return a};
+const show=(...n)=>{app.replaceChildren(...n)};
+let name="",qs=[],qi=0,score=0,ok=0,streak=0,timer=null,unsub=null;
+
+async function watchLB(cb){
+  stopLB();let t;
+  try{
+    const db=await claude.use("db");
+    if(!db){cb(null);return}
+    t=setTimeout(()=>cb(null),10000);
+    unsub=db.collection("scores").orderBy("score","desc").limit(10).onSnapshot(s=>{clearTimeout(t);cb(s.docs.map(d=>d.data()))},()=>{clearTimeout(t);cb(null)});
+  }catch(e){cb(null)}
+}
+const stopLB=()=>{if(unsub){unsub();unsub=null}};
+function lbBox(){
+  const box=h("div",{class:"card"},h("h2",{},"🏆 Рейтинг участников"),h("p",{class:"muted"},"Загрузка…"));
+  watchLB(rows=>{
+    box.replaceChildren(h("h2",{},"🏆 Рейтинг участников"));
+    if(rows===null)box.append(h("p",{class:"muted"},"Общий рейтинг сейчас недоступен. Ваш результат показан выше."));
+    else if(!rows.length)box.append(h("p",{class:"muted"},"Пока никто не завершил игру. Будьте первым!"));
+    else rows.forEach((r,i)=>box.append(h("div",{class:"row"},h("span",{class:"n"},["🥇","🥈","🥉"][i]||String(i+1)),h("span",{class:"nm"},String(r.name||"Участник")),h("span",{class:"pt"},String(r.score)+" · "+String(r.correct)+"/"+N))));
+  });
+  return box;
+}
+function start(){
+  stopLB();
+  const inp=h("input",{maxlength:"20",placeholder:"Ваше имя или ник",value:name});
+  const go=()=>{name=inp.value.trim();if(!name){inp.focus();return}begin()};
+  inp.onkeydown=e=>{if(e.key==="Enter")go()};
+  show(h("div",{class:"hero"},h("span",{class:"badge"},"ГИСТОЛОГИЯ"),h("h1",{},"Викторина: желудок, кишечник, печень, поджелудочная железа"),
+    h("p",{class:"muted"},"15 вопросов, у каждого участника свои. На ответ 20 секунд: чем быстрее, тем больше очков.")),
+    h("div",{class:"card"},h("label",{},"Как вас записать в рейтинг?"),inp,h("div",{class:"btns"},h("button",{class:"btn",onclick:go},"Играть"),h("button",{class:"btn ghost",onclick:()=>{show(lbBox(),h("button",{class:"btn ghost",onclick:start},"Назад"))}},"Рейтинг"))));
+}
+function begin(){
+  qs=shuf(POOL).slice(0,N).map(p=>{if(p.tf)return p;const idx=shuf([0,1,2,3]);return{q:p.q,o:idx.map(i=>p.o[i]),c:idx.indexOf(0)}});
+  qi=0;score=0;ok=0;streak=0;ask();
+}
+function ask(){
+  const p=qs[qi];let done=false;const t0=performance.now();
+  const bar=h("i"),pts=h("span",{},"Очки: "+score);
+  const btns=p.o.map((o,i)=>h("button",{class:"opt "+(p.tf?(i===0?"c3":"c0"):"c"+i),onclick:()=>pick(i)},h("b",{},p.tf?(i===0?"✔":"✘"):SH[i]),o));
+  const fb=h("div");
+  const next=h("div");
+  function pick(i){
+    if(done)return;done=true;clearInterval(timer);
+    const el=Math.min(T,(performance.now()-t0)/1000),good=i===p.c;let gain=0;
+    if(good){gain=Math.round(1000*(1-el/T/2));score+=gain;ok++;streak++}else streak=0;
+    btns.forEach((b,k)=>{b.disabled=true;if(k===p.c)b.classList.add("right");else if(k!==i)b.classList.add("dim")});
+    pts.textContent="Очки: "+score;
+    fb.className="fb "+(good?"ok":"no");
+    fb.textContent=(i<0?"Время вышло. ":good?"Правильно! +"+gain+" очков"+(streak>1?" · серия "+streak+" 🔥":"")+". ":"Неправильно. ")+(p.tf&&p.e?p.e:(!good?"Правильный ответ: "+p.o[p.c]+".":""));
+    next.replaceChildren(h("button",{class:"btn",onclick:()=>{qi++;qi<N?ask():finish()}},qi+1<N?"Дальше":"Результаты"));
+  }
+  clearInterval(timer);
+  timer=setInterval(()=>{const left=T-(performance.now()-t0)/1000;bar.style.width=Math.max(0,left/T*100)+"%";if(left<=0)pick(-1)},100);
+  show(h("div",{class:"top"},h("span",{},"Вопрос "+(qi+1)+" из "+N),pts),h("div",{class:"bar"},bar),h("p",{class:"q"},p.q),h("div",{class:"opts"+(p.tf?" two":"")},btns),fb,next);
+}
+async function save(){
+  try{
+    const db=await claude.use("db"),user=await claude.use("user");
+    const id=user&&await user.id();if(!db||!id)return;
+    const ref=db.collection("scores").doc(id),s=await ref.get();
+    if(!s.exists||s.data().score<score)await ref.set({name,score,correct:ok,at:Date.now()});
+  }catch(e){}
+}
+function finish(){
+  clearInterval(timer);save();
+  const msg=ok>=12?"Отличный результат! 🎉":ok>=8?"Хорошо! Ещё немного — и будет отлично.":"Повторите тему и попробуйте снова.";
+  show(h("div",{class:"hero"},h("span",{class:"badge"},"РЕЗУЛЬТАТ"),h("h1",{},name+", игра окончена"),h("div",{class:"score"},String(score)),h("p",{class:"muted"},"очков · правильных ответов: "+ok+" из "+N),h("p",{},msg)),
+    lbBox(),h("div",{class:"btns"},h("button",{class:"btn",onclick:begin},"Играть снова с новыми вопросами"),h("button",{class:"btn ghost",onclick:start},"В начало")));
+}
+start();
+</script></body></html>
