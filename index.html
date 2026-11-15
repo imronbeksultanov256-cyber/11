@@ -109,9 +109,10 @@ const MATCH=[
 ["Соедините определение и термин",[["Окрашивается гематоксилином","Базофильный"],["Окрашивается эозином","Оксифильный"],["Концевой отдел железы","Ацинус"],["Трубчатое углубление эпителия","Крипта"]]],
 ["Соедините функцию и клетку кишки",[["Всасывание","Энтероциты"],["Захват антигенов","М-клетки"],["Секретин и холецистокинин","Эндокриноциты"],["Обновление эпителия","Камбиальные клетки"]]]];
 const POOL=[...MC.map(([q,o])=>({q,o,c:0})),...TF.map(([q,v,e])=>({q,o:["Верно","Неверно"],c:v?0:1,e,tf:1}))];
+const MAX_PLAYERS=30;
 const N=15,T=20,TM=40,SH=["▲","◆","●","■"],PFX="oshgu-hist-";
 const app=document.getElementById("app");
-const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
+const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else if(a[k]!=null&&a[k]!==false)e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
 const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x}return a};
 const brand=()=>h("div",{class:"brand"},h("img",{src:"logo.png",alt:"",onerror:function(){this.remove()}}),h("span",{class:"dot"}),"ОШГУ · ГИСТОЛОГИЯ");
 const show=(wide,...n)=>{app.className=wide?"wide":"";app.replaceChildren(brand(),...n)};
@@ -121,7 +122,7 @@ let peer=null,timer=null;
 /* ---------- ЭКРАН ВХОДА ---------- */
 function landing(){
   if(peer){try{peer.destroy()}catch(e){}peer=null}
-  clearInterval(timer);
+  clearInterval(timer);clearTimeout(hostTimer);hostTimer=null;hostBody=null;lbEl=null;
   const qc=new URLSearchParams(location.search).get("c")||"";
   const code=h("input",{inputmode:"numeric",maxlength:"4",placeholder:"Код игры",value:qc.replace(/\D/g,"").slice(0,4)});
   const nm=h("input",{maxlength:"20",placeholder:"Ваше имя"});
@@ -137,6 +138,7 @@ function landing(){
 /* ---------- ВЕДУЩИЙ (ЭЛЕКТРОННАЯ ДОСКА) ---------- */
 let P=new Map(),phase="lobby",hcode="",hostTimer=null,lbEl=null,rowEls=new Map(),hostBody=null;
 function hostStart(){
+  if(peer){peer.destroy();peer=null}clearTimeout(hostTimer);hostTimer=null;hostBody=null;lbEl=null;
   P=new Map();phase="lobby";rowEls=new Map();
   const tryOpen=()=>{
     hcode=String(1000+Math.floor(Math.random()*9000));
@@ -151,11 +153,18 @@ function hostStart(){
 function hostData(c,m){
   if(!m)return;
   if(m.t==="join"){
-    let nm=String(m.name||"").trim().slice(0,20)||"Игрок",p=P.get(nm),resume=false;
-    if(p&&!p.on){p.conn=c;p.on=true;resume=p.q>0}
-    else{if(p){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}p={name:nm,score:0,q:0,ok:0,done:false,on:true,conn:c};P.set(nm,p)}
+    if(c._n&&P.get(c._n)?.conn===c){c.send({t:"joined",name:c._n});return}
+    const id=String(m.id||c.peer),existing=[...P.values()].find(x=>x.id===id);
+    let nm=String(m.name||"").trim().slice(0,20)||"Игрок",p=existing,resume=false;
+    if(p){const old=p.conn;p.conn=c;p.on=true;nm=p.name;resume=p.q>0;if(old!==c)try{old.close()}catch(e){}}
+    else{
+      if(P.size>=MAX_PLAYERS){c.send({t:"reject",message:"В игре уже 30 участников."});setTimeout(()=>c.close(),300);return}
+      if(phase==="end"){c.send({t:"reject",message:"Игра завершена. Дождитесь нового кода."});return}
+      if(P.has(nm)){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}
+      p={id,name:nm,score:0,q:0,ok:0,done:false,on:true,conn:c};P.set(nm,p)
+    }
     c._n=nm;c.send({t:"joined",name:nm,resume});if(phase==="play")c.send({t:"start"});if(phase==="end")c.send({t:"end"});hostUpd();
-  }else if(m.t==="p"){const p=P.get(c._n);if(!p)return;p.score=m.score|0;p.q=Math.min(N,m.q|0);p.ok=m.ok|0;p.done=!!m.done;hostUpd()}
+  }else if(m.t==="p"){const p=P.get(c._n);if(!p||p.conn!==c)return;p.score=m.score|0;p.q=Math.min(N,m.q|0);p.ok=m.ok|0;p.done=!!m.done;hostUpd()}
 }
 const sorted=()=>[...P.values()].sort((a,b)=>b.score-a.score||b.ok-a.ok||a.name.localeCompare(b.name));
 function hostUpd(){
@@ -168,7 +177,7 @@ function hostUpd(){
 }
 function hostLobby(soft){
   const chips=h("div",{class:"chips"},[...P.values()].map(p=>h("span",{class:"chip"+(p.on?"":" off")},p.name)));
-  if(soft&&hostBody){hostBody.replaceChildren(h("h2",{},"Участников: "+P.size),P.size?chips:h("p",{class:"mut"},"Ждём первых игроков…"),
+  if(soft&&hostBody){hostBody.replaceChildren(h("h2",{},"Участников: "+P.size+" / "+MAX_PLAYERS),P.size?chips:h("p",{class:"mut"},"Ждём первых игроков…"),
     h("div",{class:"btns"},h("button",{class:"btn red",disabled:P.size?null:"disabled",onclick:hostPlay},"Старт")));return}
   const url=location.origin+location.pathname+"?c="+hcode,qr=h("div",{class:"qr"});
   hostBody=h("div",{class:"card"});
@@ -200,24 +209,33 @@ function hostEnd(){phase="end";P.forEach(p=>{if(p.on)try{p.conn.send({t:"end"})}
 function hostFinal(s){
   const cols=["#C0C0C0","#F2C94C","#CD7F32"],hs=[190,250,150],order=[1,0,2].filter(i=>s[i]);
   const pod=h("div",{class:"pod"},order.map(i=>{const d=h("div",{style:"height:"+hs[i]+"px;background:"+cols[i]+";color:#2b1b00"},h("div",{style:"font-size:34px"},ordinal(i)),h("div",{class:"nm"},s[i].name),h("div",{class:"pt"},String(s[i].score)));return d}));
-  const list=h("div",{class:"card"},s.slice(3,15).map((p,k)=>h("div",{style:"display:flex;gap:14px;padding:8px 4px;font-size:20px;font-weight:700;border-bottom:1px solid var(--line)"},h("span",{style:"width:36px"},String(k+4)),h("span",{style:"flex:1"},p.name),h("span",{},String(p.score)))));
+  const list=h("div",{class:"card"},s.slice(3,MAX_PLAYERS).map((p,k)=>h("div",{style:"display:flex;gap:14px;padding:8px 4px;font-size:20px;font-weight:700;border-bottom:1px solid var(--line)"},h("span",{style:"width:36px"},String(k+4)),h("span",{style:"flex:1"},p.name),h("span",{},String(p.score)))));
   show(true,h("h1",{style:"text-align:center"},"Итоги игры"),pod,s.length>3?list:null,h("div",{class:"btns",style:"justify-content:center"},h("button",{class:"btn",onclick:landing},"Новая игра")));
 }
 
 /* ---------- УЧАСТНИК ---------- */
+let playerId="",joinBusy=false;
 let name="",qs=[],qi=0,score=0,ok=0,streak=0,conn=null,left=false,joined=false,playing=false,finished=false,lastLB=null,lbBox=null,banner=null,tries=0;
 function playerJoin(code,nm,errEl){
+  if(joinBusy)return;joinBusy=true;
+  if(peer){peer.destroy();peer=null}
+  playerId=globalThis.crypto?.randomUUID?.()||Date.now()+"-"+Math.random();
   name=nm;left=false;joined=false;playing=false;finished=false;lastLB=null;tries=0;
-  errEl.replaceChildren(h("p",{class:"mut"},"Подключаемся…"));
-  const fail=t=>{errEl.replaceChildren(h("div",{class:"msg"},t));try{peer&&peer.destroy()}catch(e){}peer=null};
-  const guard=setTimeout(()=>{if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.")},12000);
+  errEl.replaceChildren(h("p",{class:"mut"},"Подключаемся… Это может занять до 30 секунд."));
+  const fail=t=>{left=true;joinBusy=false;clearTimeout(guard);errEl.replaceChildren(h("div",{class:"msg"},t));try{peer&&peer.destroy()}catch(e){}peer=null};
+  const guard=setTimeout(()=>{if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.")},30000);
   const pr=new Peer();peer=pr;
   const link=()=>{
-    conn=pr.connect(PFX+code,{reliable:true});
-    conn.on("open",()=>{tries=0;conn.send({t:"join",name})});
-    conn.on("data",m=>onMsg(m,guard,fail));
-    conn.on("close",()=>{if(left)return;if(banner)banner.textContent="Связь потеряна, переподключаемся…";if(++tries<20)setTimeout(link,2000);else if(banner)banner.textContent="Не удалось восстановить связь."});
-    conn.on("error",()=>{});
+    if(left||pr.destroyed)return;
+    const c=pr.connect(PFX+code,{reliable:true,serialization:"json"});conn=c;
+    c.on("open",()=>{c.send({t:"join",name,id:playerId})});
+    c.on("data",m=>{if(conn===c)onMsg(m,guard,fail)});
+    let retryPending=false;
+    const retry=()=>{if(left||conn!==c||retryPending)return;retryPending=true;
+      if(banner){banner.style.display="block";banner.textContent="Связь потеряна, переподключаемся…"}
+      if(++tries<20)setTimeout(link,2000);else if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.");
+    };
+    c.on("close",retry);c.on("error",retry);
   };
   pr.on("open",link);
   pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
@@ -225,7 +243,8 @@ function playerJoin(code,nm,errEl){
 }
 function onMsg(m,guard,fail){
   if(!m)return;
-  if(m.t==="joined"){clearTimeout(guard);name=m.name;if(!joined){joined=true;wait()}else if(playing)sendP(finished)}
+  if(m.t==="reject"){fail(m.message);return}
+  if(m.t==="joined"){clearTimeout(guard);joinBusy=false;tries=0;if(banner)banner.style.display="none";name=m.name;if(!joined){joined=true;wait()}else if(playing)sendP(finished)}
   else if(m.t==="start"){if(!playing&&!finished)begin()}
   else if(m.t==="lb"){lastLB=m;if(lbBox)drawLB()}
   else if(m.t==="end"){if(!finished){finished=true;clearInterval(timer);if(playing)sendP(true);result(true)}}
