@@ -57,7 +57,7 @@ input::placeholder{color:#c9aab0}
 @media(max-width:800px){.hostgrid{grid-template-columns:1fr}}
 .msg{background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700}
 </style></head><body><div id="app"></div>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';document.head.appendChild(s)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const MC=[
@@ -117,12 +117,24 @@ const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math
 const brand=()=>h("div",{class:"brand"},h("img",{src:"logo.png",alt:"",onerror:function(){this.remove()}}),h("span",{class:"dot"}),"ОШГУ · ГИСТОЛОГИЯ");
 const show=(wide,...n)=>{app.className=wide?"wide":"";app.replaceChildren(brand(),...n)};
 const ordinal=i=>["🥇","🥈","🥉"][i]||String(i+1);
-let peer=null,timer=null;
+let timer=null;
+
+/* ---------- СВЯЗЬ: публичные MQTT-серверы через WebSocket (без прямых соединений между телефонами) ---------- */
+const BROKERS=[{u:"wss://public.cloud.shiftr.io:443",o:{username:"public",password:"public"}},{u:"wss://mqtt.eclipseprojects.io:443/mqtt"},{u:"wss://broker.emqx.io:8084/mqtt"},{u:"wss://test.mosquitto.org:8081"}];
+const ROOT="oshgu-hist-v2/";
+const rid=()=>Math.random().toString(36).slice(2,10);
+const mq=(b)=>mqtt.connect(b.u,Object.assign({clientId:"oq_"+rid()+rid(),clean:true,keepalive:30,connectTimeout:6000,reconnectPeriod:2000,protocolVersion:4},b.o||{}));
+let hcl=[],pcl=null,hostSweep=null,hbTimer=null,pTry=null,jt=null,guardT=null,pbase="";
+function stopAll(){
+  hcl.forEach(c=>{try{c.end(true)}catch(e){}});hcl=[];
+  if(pcl){try{pcl.end(true)}catch(e){}pcl=null}
+  clearInterval(timer);clearInterval(hostSweep);clearInterval(hbTimer);clearInterval(jt);clearTimeout(hostTimer);clearTimeout(pTry);clearTimeout(guardT);
+  hostTimer=null;hostBody=null;lbEl=null;
+}
 
 /* ---------- ЭКРАН ВХОДА ---------- */
 function landing(){
-  if(peer){try{peer.destroy()}catch(e){}peer=null}
-  clearInterval(timer);
+  stopAll();joinBusy=false;
   const qc=new URLSearchParams(location.search).get("c")||"";
   const code=h("input",{inputmode:"numeric",maxlength:"4",placeholder:"Код игры",value:qc.replace(/\D/g,"").slice(0,4)});
   const nm=h("input",{maxlength:"20",placeholder:"Ваше имя"});
@@ -137,43 +149,61 @@ function landing(){
 
 /* ---------- ВЕДУЩИЙ (ЭЛЕКТРОННАЯ ДОСКА) ---------- */
 let P=new Map(),phase="lobby",hcode="",hostTimer=null,lbEl=null,rowEls=new Map(),hostBody=null;
+const hostFatal=()=>show(false,h("div",{class:"card"},h("h2",{},"Нет связи с сервером"),h("p",{},"Проверьте интернет на доске и обновите страницу."),h("button",{class:"btn",onclick:landing},"Назад")));
+function pubAll(sub,obj){const s=JSON.stringify(obj);hcl.forEach(c=>{if(c.connected){try{c.publish(ROOT+hcode+"/"+sub,s,{qos:0})}catch(e){}}})}
 function hostStart(){
+  stopAll();
   P=new Map();phase="lobby";rowEls=new Map();
-  const tryOpen=()=>{
-    hcode=String(1000+Math.floor(Math.random()*9000));
-    const pr=new Peer(PFX+hcode);peer=pr;let opened=false;
-    pr.on("open",()=>{opened=true;hostLobby()});
-    pr.on("connection",c=>{c.on("data",m=>hostData(c,m));c.on("close",()=>{const p=P.get(c._n);if(p&&p.conn===c){p.on=false;hostUpd()}});c.on("error",()=>{})});
-    pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
-    pr.on("error",e=>{if(e.type==="unavailable-id"){try{pr.destroy()}catch(x){}tryOpen()}else if(!opened&&e.type!=="peer-unavailable"){show(false,h("div",{class:"card"},h("h2",{},"Нет связи с сервером"),h("p",{},"Проверьте интернет на доске и обновите страницу."),h("button",{class:"btn",onclick:landing},"Назад")))}});
-  };
-  show(false,h("p",{class:"mut"},"Создаём игру…"));tryOpen();
+  hcode=String(1000+Math.floor(Math.random()*9000));
+  show(false,h("p",{class:"mut"},"Создаём игру…"));
+  if(typeof mqtt==="undefined"){hostFatal();return}
+  let shown=false;
+  /* ведущий подключается ко всем серверам сразу, игрок — к любому из них */
+  BROKERS.forEach(b=>{
+    const c=mq(b);hcl.push(c);
+    c.on("connect",()=>{c.subscribe(ROOT+hcode+"/up",{qos:0});if(!shown){shown=true;hostLobby()}else hostUpd()});
+    c.on("message",(t,buf)=>{let m;try{m=JSON.parse(buf.toString())}catch(e){return}hostData(m)});
+    c.on("close",()=>hostUpd());
+    c.on("error",()=>{});
+  });
+  pTry=setTimeout(()=>{if(!shown)hostFatal()},15000);
+  hostSweep=setInterval(()=>{const now=Date.now();P.forEach(p=>{if(p.on&&now-p.seen>16000)p.on=false});hostUpd()},3000);
 }
-function hostData(c,m){
-  if(!m)return;
+function hostData(m){
+  if(!m||!m.id)return;
+  const id=String(m.id).slice(0,40);
+  const p0=[...P.values()].find(x=>x.id===id);
   if(m.t==="join"){
-    let nm=String(m.name||"").trim().slice(0,20)||"Игрок",p=P.get(nm),resume=false;
-    if(p&&!p.on){p.conn=c;p.on=true;resume=p.q>0}
+    let p=p0,resume=false;
+    if(p){p.on=true;p.seen=Date.now();resume=p.q>0}
     else{
-      if(P.size>=MAX_PLAYERS){c.send({t:"reject",message:"В игре уже "+MAX_PLAYERS+" участников."});setTimeout(()=>{try{c.close()}catch(e){}},400);return}
-      if(p){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}
-      p={name:nm,score:0,q:0,ok:0,done:false,on:true,conn:c};P.set(nm,p)
+      if(P.size>=MAX_PLAYERS){pubAll("to/"+id,{t:"reject",message:"В игре уже "+MAX_PLAYERS+" участников."});return}
+      if(phase==="end"){pubAll("to/"+id,{t:"reject",message:"Игра завершена. Дождитесь нового кода."});return}
+      let nm=String(m.name||"").trim().slice(0,20)||"Игрок";
+      if(P.has(nm)){let k=2;while(P.has(nm+" ("+k+")"))k++;nm=nm+" ("+k+")"}
+      p={id,name:nm,score:0,q:0,ok:0,done:false,on:true,seen:Date.now()};P.set(nm,p)
     }
-    c._n=nm;c.send({t:"joined",name:nm,resume});if(phase==="play")c.send({t:"start"});if(phase==="end")c.send({t:"end"});hostUpd();
-  }else if(m.t==="p"){const p=P.get(c._n);if(!p)return;p.score=m.score|0;p.q=Math.min(N,m.q|0);p.ok=m.ok|0;p.done=!!m.done;hostUpd()}
+    pubAll("to/"+id,{t:"joined",name:p.name,resume,phase});hostUpd();
+  }else if(p0){
+    p0.seen=Date.now();p0.on=true;
+    if(m.t==="p"){p0.score=m.score|0;p0.q=Math.min(N,m.q|0);p0.ok=m.ok|0;p0.done=!!m.done}
+    hostUpd();
+  }
 }
 const sorted=()=>[...P.values()].sort((a,b)=>b.score-a.score||b.ok-a.ok||a.name.localeCompare(b.name));
 function hostUpd(){
   if(hostTimer)return;
   hostTimer=setTimeout(()=>{hostTimer=null;
     const s=sorted(),rows=s.slice(0,40).map(p=>[p.name,p.score,p.q,p.done?1:0]);
-    P.forEach(p=>{if(p.on){try{p.conn.send({t:"lb",rows,n:P.size})}catch(e){}}});
+    pubAll("down",{t:"lb",rows,n:P.size,phase});
     if(phase==="lobby")hostLobby(true);else if(phase==="play")hostBoard(s);else if(phase==="end")hostFinal(s);
   },250);
 }
 function hostLobby(soft){
+  const online=hcl.filter(c=>c.connected).length;
   const chips=h("div",{class:"chips"},[...P.values()].map(p=>h("span",{class:"chip"+(p.on?"":" off")},p.name)));
   if(soft&&hostBody){hostBody.replaceChildren(h("h2",{},"Участников: "+P.size+" / "+MAX_PLAYERS),P.size?chips:h("p",{class:"mut"},"Ждём первых игроков…"),
+    h("p",{class:"mut",style:"margin-top:12px;font-size:14px"},"Серверов связи на линии: "+online+" из "+BROKERS.length),
     h("div",{class:"btns"},h("button",{class:"btn red",disabled:P.size?null:"disabled",onclick:hostPlay},"Старт")));return}
   const url=location.origin+location.pathname+"?c="+hcode,qr=h("div",{class:"qr"});
   hostBody=h("div",{class:"card"});
@@ -182,8 +212,8 @@ function hostLobby(soft){
   hostLobby(true);
 }
 function hostPlay(){
-  if(!P.size)return;phase="play";P.forEach(p=>{if(p.on)try{p.conn.send({t:"start"})}catch(e){}});
-  rowEls=new Map();lbEl=null;hostBoard(sorted());
+  if(!P.size)return;phase="play";pubAll("down",{t:"start"});
+  rowEls=new Map();lbEl=null;hostBoard(sorted());hostUpd();
 }
 function hostBoard(s){
   if(!lbEl||!lbEl.isConnected){
@@ -201,7 +231,7 @@ function hostBoard(s){
   });
   rowEls.forEach((r,k)=>{if(!keep.has(k)){r.el.remove();rowEls.delete(k)}});
 }
-function hostEnd(){phase="end";P.forEach(p=>{if(p.on)try{p.conn.send({t:"end"})}catch(e){}});hostFinal(sorted())}
+function hostEnd(){phase="end";pubAll("down",{t:"end"});hostFinal(sorted());hostUpd()}
 function hostFinal(s){
   const cols=["#C0C0C0","#F2C94C","#CD7F32"],hs=[190,250,150],order=[1,0,2].filter(i=>s[i]);
   const pod=h("div",{class:"pod"},order.map(i=>{const d=h("div",{style:"height:"+hs[i]+"px;background:"+cols[i]+";color:#2b1b00"},h("div",{style:"font-size:34px"},ordinal(i)),h("div",{class:"nm"},s[i].name),h("div",{class:"pt"},String(s[i].score)));return d}));
@@ -210,35 +240,63 @@ function hostFinal(s){
 }
 
 /* ---------- УЧАСТНИК ---------- */
-let name="",qs=[],qi=0,score=0,ok=0,streak=0,conn=null,left=false,joined=false,playing=false,finished=false,lastLB=null,lbBox=null,banner=null,tries=0;
+let playerId="",joinBusy=false;
+let name="",qs=[],qi=0,score=0,ok=0,streak=0,left=false,joined=false,playing=false,finished=false,lastLB=null,lbBox=null,banner=null;
+function pub(o){try{if(pcl&&pcl.connected)pcl.publish(pbase+"up",JSON.stringify(o),{qos:0})}catch(e){}}
 function playerJoin(code,nm,errEl){
-  name=nm;left=false;joined=false;playing=false;finished=false;lastLB=null;tries=0;
-  errEl.replaceChildren(h("p",{class:"mut"},"Подключаемся…"));
-  const fail=t=>{left=true;errEl.replaceChildren(h("div",{class:"msg"},t));try{peer&&peer.destroy()}catch(e){}peer=null};
-  const guard=setTimeout(()=>{if(!joined)fail("Не удалось подключиться. Проверьте код и интернет.")},25000);
-  const pr=new Peer();peer=pr;
-  const link=()=>{
-    if(left)return;
-    conn=pr.connect(PFX+code,{reliable:true});
-    conn.on("open",()=>{tries=0;conn.send({t:"join",name})});
-    conn.on("data",m=>onMsg(m,guard,fail));
-    conn.on("close",()=>{if(left)return;if(banner){banner.style.display="block";banner.textContent="Связь потеряна, переподключаемся…"}if(++tries<20)setTimeout(link,2000);else if(banner)banner.textContent="Не удалось восстановить связь."});
-    conn.on("error",()=>{});
+  if(joinBusy)return;joinBusy=true;
+  stopAll();
+  playerId=globalThis.crypto?.randomUUID?.()||Date.now()+"-"+Math.random();
+  name=nm;left=false;joined=false;playing=false;finished=false;lastLB=null;pbase=ROOT+code+"/";
+  const status=t=>{if(!joined&&!left)errEl.replaceChildren(h("p",{class:"mut"},t))};
+  const fail=t=>{left=true;joinBusy=false;clearTimeout(guardT);clearTimeout(pTry);clearInterval(jt);errEl.replaceChildren(h("div",{class:"msg"},t));if(pcl){try{pcl.end(true)}catch(e){}pcl=null}};
+  if(typeof mqtt==="undefined"){fail("Не загрузилась библиотека связи. Обновите страницу.");return}
+  status("Подключаемся…");
+  guardT=setTimeout(()=>{if(!joined)fail("Не удалось найти игру. Проверьте код, что игра открыта на доске, и интернет на телефоне.")},56000);
+  let bi=0;
+  const sendJoin=()=>pub({t:"join",id:playerId,name});
+  const attempt=()=>{
+    if(left||joined)return;
+    clearInterval(jt);
+    if(pcl){try{pcl.end(true)}catch(e){}pcl=null}
+    const b=BROKERS[bi%BROKERS.length];bi++;
+    status("Подключаемся… (сервер "+(((bi-1)%BROKERS.length)+1)+" из "+BROKERS.length+")");
+    const c=mq(b);pcl=c;
+    c.on("connect",()=>{
+      if(pcl!==c)return;
+      c.subscribe([pbase+"down",pbase+"to/"+playerId],{qos:0});
+      sendJoin();
+      if(!joined){clearInterval(jt);jt=setInterval(sendJoin,2000)}
+    });
+    c.on("message",(t,buf)=>{if(pcl!==c)return;let m;try{m=JSON.parse(buf.toString())}catch(e){return}onMsg(m,fail)});
+    c.on("close",()=>{if(pcl===c&&joined&&!left&&banner){banner.style.display="block";banner.textContent="Связь потеряна, переподключаемся…"}});
+    c.on("error",()=>{});
+    clearTimeout(pTry);
+    /* если за 7 секунд ведущий не ответил — пробуем другой сервер */
+    pTry=setTimeout(()=>{if(!joined&&!left)attempt()},7000);
   };
-  pr.on("open",link);
-  pr.on("disconnected",()=>{try{pr.reconnect()}catch(e){}});
-  pr.on("error",e=>{if(e.type==="peer-unavailable"&&!joined){clearTimeout(guard);fail("Игра с таким кодом не найдена.")}else if(!joined&&e.type!=="disconnected"){clearTimeout(guard);fail("Ошибка связи: "+e.type)}});
+  attempt();
 }
-function onMsg(m,guard,fail){
+function onMsg(m,fail){
   if(!m)return;
-  if(m.t==="reject"){clearTimeout(guard);fail(m.message);return}
-  if(m.t==="joined"){clearTimeout(guard);if(banner)banner.style.display="none";name=m.name;if(!joined){joined=true;wait()}else if(playing)sendP(finished)}
-  else if(m.t==="start"){if(!playing&&!finished)begin()}
-  else if(m.t==="lb"){lastLB=m;if(lbBox)drawLB()}
-  else if(m.t==="end"){if(!finished){finished=true;clearInterval(timer);if(playing)sendP(true);result(true)}}
+  if(m.t==="reject"){fail(m.message);return}
+  if(m.t==="joined"){
+    clearInterval(jt);clearTimeout(pTry);clearTimeout(guardT);joinBusy=false;if(banner)banner.style.display="none";name=m.name;
+    if(!joined){joined=true;wait();clearInterval(hbTimer);hbTimer=setInterval(()=>{playing?sendP(finished):pub({t:"hb",id:playerId})},5000)}
+    else if(playing)sendP(finished);
+    sync(m.phase);
+  }
+  else if(m.t==="lb"){lastLB=m;if(lbBox)drawLB();sync(m.phase)}
+  else if(m.t==="start")sync("play");
+  else if(m.t==="end")sync("end");
+}
+function sync(ph){
+  if(!joined)return;
+  if(ph==="play"&&!playing&&!finished)begin();
+  else if(ph==="end"&&!finished){finished=true;clearInterval(timer);if(playing)sendP(true);result(true)}
 }
 function wait(){banner=h("div",{class:"msg",style:"display:none"});show(false,h("div",{class:"card",style:"text-align:center"},h("h1",{},"Вы в игре!"),h("p",{style:"font-size:28px;font-weight:800"},name),h("p",{class:"mut"},"Ждите, пока ведущий нажмёт «Старт». Смотрите на экран доски.")));}
-function sendP(done){try{conn&&conn.open&&conn.send({t:"p",score,q:done?N:qi,ok,done:!!done})}catch(e){}}
+function sendP(done){pub({t:"p",id:playerId,score,q:done?N:qi,ok,done:!!done})}
 function prep(p){if(p.tf)return p;const idx=shuf([0,1,2,3]);return{q:p.q,o:idx.map(i=>p.o[i]),c:idx.indexOf(0)}}
 function begin(){
   playing=true;finished=false;
