@@ -56,6 +56,26 @@ input::placeholder{color:#c9aab0}
 .hostgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:center}
 @media(max-width:800px){.hostgrid{grid-template-columns:1fr}}
 .msg{background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700}
+
+body{background:radial-gradient(ellipse at 12% 8%,#70233f 0%,transparent 48%),radial-gradient(ellipse at 90% 72%,#174b59 0%,transparent 50%),linear-gradient(135deg,#1b1029,#0d1928);background-attachment:fixed;isolation:isolate}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.24;background-image:radial-gradient(ellipse at center,transparent 48%,#cda9cf 49%,#cda9cf 51%,transparent 52%),radial-gradient(circle at center,#dca5bc 0 4px,transparent 5px);background-size:150px 115px,150px 115px;background-position:0 0,20px 8px;mask-image:linear-gradient(120deg,#000,transparent 70%)}
+:root{--mut:#d7d0e5;--card:rgba(21,24,45,.78);--line:rgba(224,215,244,.2)}
+.card{box-shadow:0 16px 42px rgba(0,0,0,.16)}
+.c0,.c1,.c2,.c3{background:rgba(255,255,255,.1);border:1px solid var(--line)}
+.opt{box-shadow:none;transition:background .15s}
+button.opt:hover:not(:disabled){background:rgba(255,255,255,.2)}
+.opt.right{background:#25634d;outline:2px solid #97e2b8}
+.results-header{text-align:center;margin:28px 0}.results-header p{margin-top:12px}
+.winners{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}
+.winner{min-width:0;padding:24px 16px;border-radius:20px;text-align:center;background:var(--card);border:1px solid var(--line)}
+.winner:first-child{border-color:#e2c378;background:linear-gradient(145deg,rgba(159,112,34,.4),rgba(21,24,45,.9))}
+.place{font-size:14px;letter-spacing:.1em;color:var(--mut);margin-bottom:14px}.winner:first-child .place{color:#f3d99e}
+.winner-name{font-size:clamp(20px,3vw,30px);font-weight:800;overflow-wrap:anywhere;margin-bottom:18px}
+.winner-points{font-size:clamp(30px,4vw,48px);font-weight:900}.winner small{color:var(--mut)}
+.results-table{width:100%;border-collapse:collapse;text-align:left}.results-table th{color:var(--mut);font-size:14px;font-weight:600}.results-table th,.results-table td{padding:14px 8px;border-bottom:1px solid var(--line)}
+.results-table td:nth-child(2){overflow-wrap:anywhere}.results-table th:last-child,.results-table td:last-child{text-align:right}.results-table tbody tr:last-child td{border-bottom:0}
+.personal-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:540px;margin:24px auto}.personal-stats .card{margin:0;text-align:center}.personal-stats strong{display:block;font-size:clamp(30px,6vw,48px);margin-bottom:8px}
+@media(max-width:560px){.winners{grid-template-columns:1fr;gap:10px}.winner{display:grid;grid-template-columns:70px 1fr auto;align-items:center;text-align:left;gap:10px;padding:18px 14px}.winner-name,.place{margin:0}.winner-points{font-size:28px}.winner small{grid-column:3;font-size:12px}.results-table th,.results-table td{padding:12px 4px;font-size:14px}}
 </style></head><body><div id="app"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';document.head.appendChild(s)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -110,7 +130,7 @@ const MATCH=[
 ["Соедините функцию и клетку кишки",[["Всасывание","Энтероциты"],["Захват антигенов","М-клетки"],["Секретин и холецистокинин","Эндокриноциты"],["Обновление эпителия","Камбиальные клетки"]]]];
 const POOL=[...MC.map(([q,o])=>({q,o,c:0})),...TF.map(([q,v,e])=>({q,o:["Верно","Неверно"],c:v?0:1,e,tf:1}))];
 const MAX_PLAYERS=20;
-const N=20,T=20,TM=40,SH=["▲","◆","●","■"],PFX="oshgu-hist-";
+const N=20,T=20,TM=40,PFX="oshgu-hist-";
 const app=document.getElementById("app");
 const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else if(a[k]!=null&&a[k]!==false)e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
 const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x}return a};
@@ -245,14 +265,13 @@ function drawHostQuestion(){
   if(q.m){
     hostQuestion.append(h("div",{class:"grid2"},h("div",{},q.left.map(t=>h("p",{class:"chip"},t))),h("div",{},q.right.map(t=>h("p",{class:"chip"},t)))));
     if(q.answered)hostQuestion.append(h("div",{class:"mut"},q.pairs.map(pr=>h("p",{},pr[0]+" — "+pr[1]))));
-  }else hostQuestion.append(h("div",{class:"opts"+(q.options.length===2?" two":"")},q.options.map((t,i)=>h("div",{class:"opt c"+i+(q.answered&&i===q.correct?" right":"")},h("b",{},q.options.length===2?(i===0?"✔":"✘"):SH[i]),t))));
+  }else hostQuestion.append(h("div",{class:"opts"+(q.options.length===2?" two":"")},q.options.map((t,i)=>h("div",{class:"opt c"+i+(q.answered&&i===q.correct?" right":"")},t))));
 }
 function hostEnd(){phase="end";pubAll("down",{t:"end"});hostFinal(sorted());hostUpd()}
 function hostFinal(s){
-  const cols=["#C0C0C0","#F2C94C","#CD7F32"],hs=[190,250,150],order=[1,0,2].filter(i=>s[i]);
-  const pod=h("div",{class:"pod"},order.map(i=>{const d=h("div",{style:"height:"+hs[i]+"px;background:"+cols[i]+";color:#2b1b00"},h("div",{style:"font-size:34px"},ordinal(i)),h("div",{class:"nm"},s[i].name),h("div",{class:"pt"},String(s[i].score)));return d}));
-  const list=h("div",{class:"card"},s.slice(3,MAX_PLAYERS).map((p,k)=>h("div",{style:"display:flex;gap:14px;padding:8px 4px;font-size:20px;font-weight:700;border-bottom:1px solid var(--line)"},h("span",{style:"width:36px"},String(k+4)),h("span",{style:"flex:1"},p.name),h("span",{},String(p.score)))));
-  show(true,h("h1",{style:"text-align:center"},"Итоги игры"),pod,s.length>3?list:null,h("div",{class:"btns",style:"justify-content:center"},h("button",{class:"btn",onclick:landing},"Новая игра")));
+  const winners=h("div",{class:"winners"},s.slice(0,3).map((p,i)=>h("div",{class:"winner"},h("div",{class:"place"},(i+1)+" МЕСТО"),h("div",{class:"winner-name"},p.name),h("div",{class:"winner-points"},String(p.score)),h("small",{},"очков"))));
+  const table=h("table",{class:"results-table"},h("thead",{},h("tr",{},["Место","Участник","Верно","Очки"].map(t=>h("th",{scope:"col"},t)))),h("tbody",{},s.map((p,i)=>h("tr",{},h("td",{},String(i+1)),h("td",{},p.name),h("td",{},p.ok+" / "+N),h("td",{},String(p.score))))));
+  show(true,h("div",{class:"results-header"},h("h1",{},"Итоги игры"),h("p",{class:"mut"},"Участников: "+s.length)),s.length?winners:null,s.length?h("div",{class:"card",style:"overflow-x:auto"},table):h("p",{},"Нет участников"),h("div",{class:"btns",style:"justify-content:center"},h("button",{class:"btn",onclick:landing},"Новая игра")));
 }
 
 /* ---------- УЧАСТНИК ---------- */
@@ -330,7 +349,7 @@ function head(pts,bar){banner=h("div",{class:"msg",style:"display:none"});return
 function nextBtn(){return h("button",{class:"btn",onclick:()=>{qi++;qi<N?ask():fin()}},qi+1<N?"Дальше":"Результаты")}
 function askQ(p){
   let done=false;const t0=performance.now(),bar=h("i"),pts=h("span",{},"Очки: "+score),fb=h("div"),next=h("div");
-  const btns=p.o.map((o,i)=>h("button",{class:"opt "+(p.tf?(i===0?"c3":"c0"):"c"+i),onclick:()=>pick(i)},h("b",{},p.tf?(i===0?"✔":"✘"):SH[i]),o));
+  const btns=p.o.map((o,i)=>h("button",{class:"opt "+(p.tf?(i===0?"c3":"c0"):"c"+i),onclick:()=>pick(i)},o));
   function pick(i){
     if(done)return;done=true;clearInterval(timer);
     const el=Math.min(T,(performance.now()-t0)/1000),good=i===p.c;let gain=0;
@@ -370,8 +389,9 @@ function drawLB(){
 }
 function result(forced){
   lbBox=h("div",{class:"card"});
-  show(false,h("div",{style:"text-align:center;padding:8px 0"},h("p",{class:"mut"},forced?"Ведущий завершил игру":"Вы ответили на все вопросы"),h("h1",{},name),h("div",{class:"score"},String(score)),h("p",{class:"mut"},"очков · верных ответов: "+ok+" из "+N)),lbBox);
+  show(false,h("div",{class:"results-header"},h("h1",{},"Итоги"),h("p",{style:"font-size:24px;font-weight:700;overflow-wrap:anywhere"},name),forced?h("p",{class:"mut"},"Игра завершена"):null),h("div",{class:"personal-stats"},h("div",{class:"card"},h("strong",{},String(score)),h("span",{class:"mut"},"Очки")),h("div",{class:"card"},h("strong",{},ok+" / "+N),h("span",{class:"mut"},"Верных ответов"))),lbBox);
   drawLB();
 }
+
 landing();
 </script></body></html>
