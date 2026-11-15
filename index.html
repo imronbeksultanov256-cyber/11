@@ -110,7 +110,7 @@ const MATCH=[
 ["Соедините функцию и клетку кишки",[["Всасывание","Энтероциты"],["Захват антигенов","М-клетки"],["Секретин и холецистокинин","Эндокриноциты"],["Обновление эпителия","Камбиальные клетки"]]]];
 const POOL=[...MC.map(([q,o])=>({q,o,c:0})),...TF.map(([q,v,e])=>({q,o:["Верно","Неверно"],c:v?0:1,e,tf:1}))];
 const MAX_PLAYERS=20;
-const N=15,T=20,TM=40,SH=["▲","◆","●","■"],PFX="oshgu-hist-";
+const N=20,T=20,TM=40,SH=["▲","◆","●","■"],PFX="oshgu-hist-";
 const app=document.getElementById("app");
 const h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k==="class")e.className=a[k];else if(k.startsWith("on"))e[k]=a[k];else if(a[k]!=null&&a[k]!==false)e.setAttribute(k,a[k])}c.flat().forEach(x=>{if(x!=null)e.append(x)});return e};
 const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const x=a[i];a[i]=a[j];a[j]=x}return a};
@@ -141,21 +141,22 @@ function landing(){
   const err=h("div");
   const go=()=>{const c=code.value.trim(),n=nm.value.trim();if(c.length!==4){code.focus();return}if(!n){nm.focus();return}playerJoin(c,n,err)};
   nm.onkeydown=e=>{if(e.key==="Enter")go()};
-  show(false,h("h1",{},"Викторина по гистологии"),h("p",{class:"mut"},"Желудок, кишечник, печень и поджелудочная железа. 15 вопросов у каждого свои, а рейтинг виден на общем экране. До "+MAX_PLAYERS+" участников."),
+  show(false,h("h1",{},"Викторина по гистологии"),h("p",{class:"mut"},"20 вопросов"),
     h("div",{class:"grid2"},
       h("div",{class:"card"},h("h2",{},"Я участник"),code,nm,err,h("button",{class:"btn",onclick:go},"Войти в игру")),
-      h("div",{class:"card"},h("h2",{},"Я веду игру"),h("p",{class:"mut"},"Откройте это окно на электронной доске. Появится код, по которому зайдут одногруппники."),h("button",{class:"btn red",onclick:hostStart},"Начать"))));
+      h("div",{class:"card"},h("h2",{},"Я веду игру"),h("button",{class:"btn red",onclick:hostStart},"Начать"))));
 }
 
 /* ---------- ВЕДУЩИЙ (ЭЛЕКТРОННАЯ ДОСКА) ---------- */
+let hostSelected="",hostQuestion=null;
 let P=new Map(),phase="lobby",hcode="",hostTimer=null,lbEl=null,rowEls=new Map(),hostBody=null;
 const hostFatal=()=>show(false,h("div",{class:"card"},h("h2",{},"Нет связи с сервером"),h("p",{},"Проверьте интернет на доске и обновите страницу."),h("button",{class:"btn",onclick:landing},"Назад")));
 function pubAll(sub,obj){const s=JSON.stringify(obj);hcl.forEach(c=>{if(c.connected){try{c.publish(ROOT+hcode+"/"+sub,s,{qos:0})}catch(e){}}})}
 function hostStart(){
   stopAll();
-  P=new Map();phase="lobby";rowEls=new Map();
+  P=new Map();hostSelected="";hostQuestion=null;phase="lobby";rowEls=new Map();
   hcode=String(1000+Math.floor(Math.random()*9000));
-  show(false,h("p",{class:"mut"},"Создаём игру…"));
+  show(false,h("p",{class:"mut"},"Подключение…"));
   if(typeof mqtt==="undefined"){hostFatal();return}
   let shown=false;
   /* ведущий подключается ко всем серверам сразу, игрок — к любому из них */
@@ -186,7 +187,7 @@ function hostData(m){
     pubAll("to/"+id,{t:"joined",name:p.name,resume,phase});hostUpd();
   }else if(p0){
     p0.seen=Date.now();p0.on=true;
-    if(m.t==="p"){p0.score=m.score|0;p0.q=Math.min(N,m.q|0);p0.ok=m.ok|0;p0.done=!!m.done}
+    if(m.t==="p"){p0.score=m.score|0;p0.q=Math.min(N,m.q|0);p0.ok=m.ok|0;p0.done=!!m.done;if(m.current)p0.current=m.current}
     hostUpd();
   }
 }
@@ -203,7 +204,6 @@ function hostLobby(soft){
   const online=hcl.filter(c=>c.connected).length;
   const chips=h("div",{class:"chips"},[...P.values()].map(p=>h("span",{class:"chip"+(p.on?"":" off")},p.name)));
   if(soft&&hostBody){hostBody.replaceChildren(h("h2",{},"Участников: "+P.size+" / "+MAX_PLAYERS),P.size?chips:h("p",{class:"mut"},"Ждём первых игроков…"),
-    h("p",{class:"mut",style:"margin-top:12px;font-size:14px"},"Серверов связи на линии: "+online+" из "+BROKERS.length),
     h("div",{class:"btns"},h("button",{class:"btn red",disabled:P.size?null:"disabled",onclick:hostPlay},"Старт")));return}
   const url=location.origin+location.pathname+"?c="+hcode,qr=h("div",{class:"qr"});
   hostBody=h("div",{class:"card"});
@@ -218,8 +218,9 @@ function hostPlay(){
 function hostBoard(s){
   if(!lbEl||!lbEl.isConnected){
     lbEl=h("div",{class:"lb"});
-    show(true,h("div",{class:"top"},h("div",{},h("span",{class:"mut"},"Код игры: "),h("b",{style:"font-size:28px"},hcode)),h("div",{id:"cnt",class:"mut"}),h("button",{class:"btn ghost",onclick:hostEnd},"Завершить игру")),lbEl);
+    show(true,h("div",{class:"top"},h("div",{},h("span",{class:"mut"},"Код игры: "),h("b",{style:"font-size:28px"},hcode)),h("div",{id:"cnt",class:"mut"}),h("button",{class:"btn ghost",onclick:hostEnd},"Завершить игру")),hostQuestion=h("div",{class:"card"}),lbEl);
   }
+  drawHostQuestion();
   const done=s.filter(p=>p.done).length;document.getElementById("cnt").textContent="Игроков: "+s.length+" · закончили: "+done;
   lbEl.style.height=Math.max(1,s.length)*70+"px";
   const keep=new Set();
@@ -230,6 +231,21 @@ function hostBoard(s){
     r.n.textContent=ordinal(i);r.nm.textContent=p.name+(p.done?" ✔":"");r.pg.style.width=(p.q/N*100)+"%";r.pt.textContent=p.score;
   });
   rowEls.forEach((r,k)=>{if(!keep.has(k)){r.el.remove();rowEls.delete(k)}});
+}
+function drawHostQuestion(){
+  if(!hostQuestion)return;
+  const players=[...P.values()];
+  if(!players.some(p=>p.id===hostSelected))hostSelected=players[0]?.id||"";
+  const select=h("select",{style:"font:inherit;font-size:18px;max-width:100%;padding:10px;border-radius:10px;margin-bottom:14px",onchange:e=>{hostSelected=e.target.value;drawHostQuestion()}},players.map(p=>h("option",{value:p.id},p.name)));
+  select.value=hostSelected;
+  const p=players.find(p=>p.id===hostSelected),q=p?.current;
+  hostQuestion.replaceChildren(select);
+  if(!q){hostQuestion.append(h("p",{class:"mut"},"Ожидаем вопрос…"));return}
+  hostQuestion.append(h("div",{class:"top"},"Вопрос "+q.n+" из "+N),h("p",{class:"q"},q.title));
+  if(q.m){
+    hostQuestion.append(h("div",{class:"grid2"},h("div",{},q.left.map(t=>h("p",{class:"chip"},t))),h("div",{},q.right.map(t=>h("p",{class:"chip"},t)))));
+    if(q.answered)hostQuestion.append(h("div",{class:"mut"},q.pairs.map(pr=>h("p",{},pr[0]+" — "+pr[1]))));
+  }else hostQuestion.append(h("div",{class:"opts"+(q.options.length===2?" two":"")},q.options.map((t,i)=>h("div",{class:"opt c"+i+(q.answered&&i===q.correct?" right":"")},h("b",{},q.options.length===2?(i===0?"✔":"✘"):SH[i]),t))));
 }
 function hostEnd(){phase="end";pubAll("down",{t:"end"});hostFinal(sorted());hostUpd()}
 function hostFinal(s){
@@ -251,7 +267,7 @@ function playerJoin(code,nm,errEl){
   const status=t=>{if(!joined&&!left)errEl.replaceChildren(h("p",{class:"mut"},t))};
   const fail=t=>{left=true;joinBusy=false;clearTimeout(guardT);clearTimeout(pTry);clearInterval(jt);errEl.replaceChildren(h("div",{class:"msg"},t));if(pcl){try{pcl.end(true)}catch(e){}pcl=null}};
   if(typeof mqtt==="undefined"){fail("Не загрузилась библиотека связи. Обновите страницу.");return}
-  status("Подключаемся…");
+  status("Подключение…");
   guardT=setTimeout(()=>{if(!joined)fail("Не удалось найти игру. Проверьте код, что игра открыта на доске, и интернет на телефоне.")},56000);
   let bi=0;
   const sendJoin=()=>pub({t:"join",id:playerId,name});
@@ -260,7 +276,7 @@ function playerJoin(code,nm,errEl){
     clearInterval(jt);
     if(pcl){try{pcl.end(true)}catch(e){}pcl=null}
     const b=BROKERS[bi%BROKERS.length];bi++;
-    status("Подключаемся… (сервер "+(((bi-1)%BROKERS.length)+1)+" из "+BROKERS.length+")");
+    status("Подключение…");
     const c=mq(b);pcl=c;
     c.on("connect",()=>{
       if(pcl!==c)return;
@@ -295,16 +311,21 @@ function sync(ph){
   if(ph==="play"&&!playing&&!finished)begin();
   else if(ph==="end"&&!finished){finished=true;clearInterval(timer);if(playing)sendP(true);result(true)}
 }
-function wait(){banner=h("div",{class:"msg",style:"display:none"});show(false,h("div",{class:"card",style:"text-align:center"},h("h1",{},"Вы в игре!"),h("p",{style:"font-size:28px;font-weight:800"},name),h("p",{class:"mut"},"Ждите, пока ведущий нажмёт «Старт». Смотрите на экран доски.")));}
-function sendP(done){pub({t:"p",id:playerId,score,q:done?N:qi,ok,done:!!done})}
+function wait(){banner=h("div",{class:"msg",style:"display:none"});show(false,h("div",{class:"card",style:"text-align:center"},h("h1",{},"Вы в игре!"),h("p",{style:"font-size:28px;font-weight:800"},name),h("p",{class:"mut"},"Ожидаем старта…")));}
+let currentQuestion=null;
+function sendP(done){pub({t:"p",id:playerId,score,q:done?N:qi,ok,done:!!done,current:currentQuestion})}
 function prep(p){if(p.tf)return p;const idx=shuf([0,1,2,3]);return{q:p.q,o:idx.map(i=>p.o[i]),c:idx.indexOf(0)}}
 function begin(){
   playing=true;finished=false;
-  const reg=shuf(POOL).slice(0,12).map(prep),mt=shuf(MATCH).slice(0,3).map(([title,pairs])=>({m:1,title,pairs}));
+  const reg=shuf(POOL).slice(0,N-3).map(prep),mt=shuf(MATCH).slice(0,3).map(([title,pairs])=>({m:1,title,pairs}));
   const pos=new Set(shuf([...Array(N).keys()]).slice(0,3));qs=[];for(let i=0;i<N;i++)qs.push(pos.has(i)?mt.shift():reg.shift());
-  qi=0;score=0;ok=0;streak=0;sendP(false);ask();
+  qi=0;score=0;ok=0;streak=0;currentQuestion=null;ask();
 }
-function ask(){qs[qi].m?askMatch(qs[qi]):askQ(qs[qi])}
+function ask(){
+  const p=qs[qi];
+  currentQuestion=p.m?{n:qi+1,m:1,title:p.title,left:shuf(p.pairs.map(pr=>pr[0])),right:shuf(p.pairs.map(pr=>pr[1])),answered:false}:{n:qi+1,title:p.q,options:p.o,answered:false};
+  sendP(false);p.m?askMatch(p):askQ(p);
+}
 function head(pts,bar){banner=h("div",{class:"msg",style:"display:none"});return[banner,h("div",{class:"top"},h("span",{},"Вопрос "+(qi+1)+" из "+N),pts),h("div",{class:"bar"},bar)]}
 function nextBtn(){return h("button",{class:"btn",onclick:()=>{qi++;qi<N?ask():fin()}},qi+1<N?"Дальше":"Результаты")}
 function askQ(p){
@@ -317,7 +338,7 @@ function askQ(p){
     btns.forEach((b,k)=>{b.disabled=true;if(k===p.c)b.classList.add("right");else if(k!==i)b.classList.add("dim")});
     pts.textContent="Очки: "+score;fb.className="fb "+(good?"ok":"no");
     fb.textContent=(i<0?"Время вышло. ":good?"Правильно! +"+gain+(streak>1?" · серия "+streak+" 🔥":"")+". ":"Неправильно. ")+(p.tf&&p.e?p.e:(!good?"Правильный ответ: "+p.o[p.c]+".":""));
-    qi++;sendP(false);qi--;next.replaceChildren(nextBtn());
+    currentQuestion.answered=true;currentQuestion.correct=p.c;qi++;sendP(false);qi--;next.replaceChildren(nextBtn());
   }
   clearInterval(timer);timer=setInterval(()=>{const l=T-(performance.now()-t0)/1000;bar.style.width=Math.max(0,l/T*100)+"%";if(l<=0)pick(-1)},100);
   show(false,...head(pts,bar),h("p",{class:"q"},p.q),h("div",{class:"opts"+(p.tf?" two":"")},btns),fb,next);
@@ -328,7 +349,7 @@ function askMatch(p){
   const finish=()=>{if(over)return;over=true;clearInterval(timer);LB.concat(RB).forEach(b=>b.disabled=true);
     const perfect=got===4&&mist===0;if(perfect){ok++;streak++}else streak=0;
     fb.className="fb "+(got===4?"ok":"no");fb.textContent="Соединено "+got+" из 4 · +"+gain+" очков"+(perfect?" · без ошибок!":mist?" · ошибок: "+mist:"");
-    pts.textContent="Очки: "+score;qi++;sendP(false);qi--;next.replaceChildren(nextBtn())};
+    pts.textContent="Очки: "+score;currentQuestion.answered=true;currentQuestion.pairs=p.pairs;qi++;sendP(false);qi--;next.replaceChildren(nextBtn())};
   p.pairs.forEach((pr,i)=>{
     LB[i]=h("button",{onclick:()=>{if(over||LB[i].classList.contains("done"))return;LB.forEach(b=>b.classList.remove("sel"));sel=i;LB[i].classList.add("sel")}},pr[0]);
     RB[i]=h("button",{onclick:()=>{
@@ -339,7 +360,7 @@ function askMatch(p){
   });
   const L=shuf([0,1,2,3]),R=shuf([0,1,2,3]),cells=[];for(let k=0;k<4;k++)cells.push(LB[L[k]],RB[R[k]]);
   clearInterval(timer);timer=setInterval(()=>{const l=TM-(performance.now()-t0)/1000;bar.style.width=Math.max(0,l/TM*100)+"%";if(l<=0)finish()},100);
-  show(false,...head(pts,bar),h("p",{class:"q"},p.title),h("p",{class:"mut"},"Нажмите на вопрос слева, затем на верный ответ справа."),h("div",{class:"mt"},cells),fb,next);
+  show(false,...head(pts,bar),h("p",{class:"q"},p.title),h("p",{class:"mut"},"Соедините пары"),h("div",{class:"mt"},cells),fb,next);
 }
 function fin(){finished=true;clearInterval(timer);sendP(true);result(false)}
 function drawLB(){
